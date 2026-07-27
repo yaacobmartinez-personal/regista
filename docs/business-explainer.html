@@ -1,0 +1,492 @@
+<style>
+  :root {
+    --bg: #F5F6F4;
+    --surface: #FFFFFF;
+    --surface-2: #EEF1EE;
+    --ink: #14312E;
+    --ink-soft: #4A5B57;
+    --ink-faint: #6E7F7A;
+    --primary: #0F5C54;
+    --primary-soft: #0f5c541a;
+    --accent: #C8842B;
+    --accent-soft: #c8842b1f;
+    --line: #DDE3E0;
+    --line-strong: #C7D0CC;
+
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SFMono-Regular", "Cascadia Code", "Consolas", ui-monospace, monospace;
+
+    --measure: 66ch;
+    --radius: 14px;
+    --maxw: 1080px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0C1614;
+      --surface: #12211E;
+      --surface-2: #182B27;
+      --ink: #EAF0ED;
+      --ink-soft: #A9BBB6;
+      --ink-faint: #7C918B;
+      --primary: #4FB3A6;
+      --primary-soft: #4fb3a61f;
+      --accent: #E0A84A;
+      --accent-soft: #e0a84a24;
+      --line: #21332F;
+      --line-strong: #2C433D;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0C1614;
+    --surface: #12211E;
+    --surface-2: #182B27;
+    --ink: #EAF0ED;
+    --ink-soft: #A9BBB6;
+    --ink-faint: #7C918B;
+    --primary: #4FB3A6;
+    --primary-soft: #4fb3a61f;
+    --accent: #E0A84A;
+    --accent-soft: #e0a84a24;
+    --line: #21332F;
+    --line-strong: #2C433D;
+  }
+  :root[data-theme="light"] {
+    --bg: #F5F6F4;
+    --surface: #FFFFFF;
+    --surface-2: #EEF1EE;
+    --ink: #14312E;
+    --ink-soft: #4A5B57;
+    --ink-faint: #6E7F7A;
+    --primary: #0F5C54;
+    --primary-soft: #0f5c541a;
+    --accent: #C8842B;
+    --accent-soft: #c8842b1f;
+    --line: #DDE3E0;
+    --line-strong: #C7D0CC;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+
+  .page {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0;
+  }
+
+  h1, h2, h3 { font-family: var(--serif); font-weight: 600; text-wrap: balance; color: var(--ink); }
+
+  /* ---------- Masthead ---------- */
+  .masthead {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; padding: 22px 0 0;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand .mark {
+    font-family: var(--serif); font-size: 1.35rem; font-weight: 600;
+    letter-spacing: 0.01em; color: var(--ink);
+  }
+  .brand .mark b { color: var(--primary); font-weight: 600; }
+  .tagline { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink-faint); }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 56px 0 40px; }
+  .hero h1 {
+    font-size: clamp(2.15rem, 5.2vw, 3.35rem);
+    line-height: 1.06; letter-spacing: -0.015em; margin: 18px 0 0; max-width: 16ch;
+  }
+  .hero .lede {
+    margin: 22px 0 0; max-width: var(--measure);
+    font-size: 1.15rem; color: var(--ink-soft);
+  }
+  .hero .lede b { color: var(--ink); font-weight: 600; }
+
+  .meta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+  .chip {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em;
+    color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line);
+    padding: 7px 12px; border-radius: 999px;
+  }
+  .chip b { color: var(--primary); font-weight: 600; }
+
+  /* ---------- Perforation divider ---------- */
+  .perf { position: relative; height: 1px; margin: 8px 0; }
+  .perf::before {
+    content: ""; position: absolute; inset: 0; top: 50%;
+    border-top: 2px dashed var(--line-strong);
+  }
+  .perf::after {
+    content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--bg); border: 2px dashed var(--line-strong);
+  }
+
+  /* ---------- Sections ---------- */
+  section { padding: 46px 0; }
+  .section-head { max-width: var(--measure); margin-bottom: 30px; }
+  .section-head h2 { font-size: clamp(1.5rem, 3vw, 2rem); margin: 10px 0 0; letter-spacing: -0.01em; }
+  .section-head p { color: var(--ink-soft); margin: 12px 0 0; }
+
+  .prose p { max-width: var(--measure); color: var(--ink-soft); }
+  .prose p b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Persona cards ---------- */
+  .grid { display: grid; gap: 18px; }
+  .cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .cols-2 { grid-template-columns: repeat(2, 1fr); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 24px;
+  }
+  .card .role {
+    font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 12px;
+  }
+  .card h3 { font-size: 1.2rem; margin: 0 0 8px; }
+  .card p { margin: 0; color: var(--ink-soft); font-size: 0.96rem; }
+
+  /* ---------- Steps ---------- */
+  .steps { display: grid; gap: 2px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .step {
+    display: grid; grid-template-columns: 64px 1fr; gap: 20px; align-items: start;
+    background: var(--surface); padding: 22px 24px;
+  }
+  .step + .step { border-top: 1px solid var(--line); }
+  .step .num {
+    font-family: var(--serif); font-size: 1.6rem; color: var(--primary);
+    line-height: 1; font-variant-numeric: tabular-nums;
+    border-right: 2px solid var(--line); padding-right: 20px; min-height: 100%;
+  }
+  .step h3 { font-size: 1.1rem; margin: 0 0 5px; font-family: var(--sans); font-weight: 650; }
+  .step p { margin: 0; color: var(--ink-soft); font-size: 0.96rem; max-width: 60ch; }
+
+  /* ---------- Capability lists ---------- */
+  .cap {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 22px 24px;
+  }
+  .cap h3 {
+    font-family: var(--sans); font-size: 0.78rem; font-weight: 650;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink);
+    margin: 0 0 14px; padding-bottom: 12px; border-bottom: 1px solid var(--line);
+  }
+  .cap ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .cap li { position: relative; padding-left: 22px; color: var(--ink-soft); font-size: 0.95rem; }
+  .cap li::before {
+    content: ""; position: absolute; left: 0; top: 0.55em;
+    width: 8px; height: 8px; border-radius: 2px; background: var(--primary);
+  }
+
+  /* ---------- Safeguards ---------- */
+  .safe { background: var(--surface-2); border-radius: 20px; padding: 40px; border: 1px solid var(--line); }
+  .safe .grid { margin-top: 26px; }
+  .guard { display: grid; grid-template-columns: 28px 1fr; gap: 14px; align-items: start; }
+  .guard .stamp {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid var(--accent); color: var(--accent);
+    display: grid; place-items: center; font-size: 0.8rem; font-weight: 700;
+  }
+  .guard h3 { font-family: var(--sans); font-size: 0.98rem; font-weight: 650; margin: 2px 0 4px; }
+  .guard p { margin: 0; color: var(--ink-soft); font-size: 0.9rem; }
+
+  /* ---------- Scope ---------- */
+  .scope-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+  .scope-list span {
+    font-size: 0.9rem; color: var(--ink-soft);
+    border: 1px dashed var(--line-strong); border-radius: 8px; padding: 8px 13px;
+  }
+
+  /* ---------- Footer ---------- */
+  footer { border-top: 1px solid var(--line); margin-top: 20px; padding: 30px 0 48px; }
+  .foot-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px;
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.05em; color: var(--ink-faint); }
+  .foot-row b { color: var(--primary); font-weight: 600; }
+
+  a.inline { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+
+  @media (max-width: 760px) {
+    .page { font-size: 16px; }
+    .cols-3, .cols-2 { grid-template-columns: 1fr; }
+    .safe { padding: 26px; }
+    .step { grid-template-columns: 48px 1fr; gap: 14px; }
+    .step .num { padding-right: 14px; font-size: 1.35rem; }
+  }
+</style>
+
+<div class="page">
+  <div class="wrap">
+
+    <header class="masthead">
+      <div class="brand">
+        <span class="mark">Re<b>gista</b></span>
+      </div>
+      <span class="tagline">Event registration, per organization</span>
+    </header>
+
+    <!-- HERO -->
+    <div class="hero">
+      <p class="eyebrow">Product overview · v1</p>
+      <h1>Every organization runs its own event registration.</h1>
+      <p class="lede">
+        Regista is a platform where each organization gets its <b>own branded
+        registration space</b> — its own web address, its own events, its own guest
+        lists. People sign up for events in seconds, and organizers manage every
+        attendee from one dashboard. <b>One platform, cleanly separated for every client.</b>
+      </p>
+      <div class="meta-row">
+        <span class="chip"><b>Multi-organization</b> &nbsp;one platform, many tenants</span>
+        <span class="chip"><b>Free events</b> &nbsp;no payments in v1</span>
+        <span class="chip"><b>Self-serve</b> &nbsp;sign up and go</span>
+      </div>
+    </div>
+
+    <div class="perf"></div>
+
+    <!-- WHAT IT IS -->
+    <section class="prose">
+      <div class="section-head">
+        <p class="eyebrow">The idea</p>
+        <h2>Think of it as a box office each organization can open for itself.</h2>
+      </div>
+      <p>
+        The name <i>Regista</i> means <i>the director</i> — the one who orchestrates
+        everyone into their places. That is the job of the product: an event organizer
+        signs up, claims an address like <b>acme.regista.app</b>, and immediately has a
+        place to publish events and collect registrations from the public.
+      </p>
+      <p>
+        Behind the scenes it is a single system, but each organization sees only its own
+        world. A university, a conference team, and a community group can all run on
+        Regista at the same time and never touch one another's data.
+      </p>
+    </section>
+
+    <!-- WHO IT'S FOR -->
+    <section>
+      <div class="section-head">
+        <p class="eyebrow">Who it's for</p>
+        <h2>Three people, one flow.</h2>
+      </div>
+      <div class="grid cols-3">
+        <div class="card">
+          <p class="role">Organizer</p>
+          <h3>Runs the events</h3>
+          <p>Creates events, publishes registration pages, checks attendees in on the day,
+             and invites colleagues to help. Works from a private dashboard.</p>
+        </div>
+        <div class="card">
+          <p class="role">Registrant</p>
+          <h3>Signs up to attend</h3>
+          <p>A member of the public. Opens an event link, fills a short form, and gets a
+             confirmation email. No account, no friction.</p>
+        </div>
+        <div class="card">
+          <p class="role">Operator</p>
+          <h3>Runs the platform</h3>
+          <p>That's us. We keep the service running and the data protected — acting on
+             each organization's behalf, never mingling their information.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section>
+      <div class="section-head">
+        <p class="eyebrow">How it works</p>
+        <h2>From sign-up to check-in, in five steps.</h2>
+        <p>A real sequence — each step unlocks the next.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div>
+          <div>
+            <h3>An organization signs up</h3>
+            <p>They create an account, name their organization, and pick their web address.
+               A quick email verification confirms it's really them before the space goes live.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num">2</div>
+          <div>
+            <h3>They create and publish an event</h3>
+            <p>Title, description, date and time, an optional capacity limit and waitlist.
+               Publishing turns on a public registration page with its own shareable link.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num">3</div>
+          <div>
+            <h3>The public registers</h3>
+            <p>Attendees fill a short form. Capacity is respected automatically — once full,
+               people join a waitlist or are politely turned away. Everyone gets a confirmation email.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num">4</div>
+          <div>
+            <h3>Organizers manage attendees</h3>
+            <p>Search the guest list, mark people checked in on the day, and export the list
+               to a spreadsheet. Personal data can be removed on request at any time.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num">5</div>
+          <div>
+            <h3>They bring in their team</h3>
+            <p>Admins invite colleagues by email and assign a role. The team shares the
+               workload while each person's access stays scoped to that organization.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CAPABILITIES -->
+    <section>
+      <div class="section-head">
+        <p class="eyebrow">What you can do in v1</p>
+        <h2>The first release, in plain terms.</h2>
+      </div>
+      <div class="grid cols-2">
+        <div class="cap">
+          <h3>Events</h3>
+          <ul>
+            <li>Create, edit, and delete events</li>
+            <li>Set capacity and enable a waitlist</li>
+            <li>Draft, publish, and close events</li>
+            <li>A shareable public page per event</li>
+          </ul>
+        </div>
+        <div class="cap">
+          <h3>Registration</h3>
+          <ul>
+            <li>Public sign-up with no account needed</li>
+            <li>Automatic capacity and waitlist handling</li>
+            <li>One sign-up per email, per event</li>
+            <li>Confirmation emails on success</li>
+          </ul>
+        </div>
+        <div class="cap">
+          <h3>Attendees</h3>
+          <ul>
+            <li>Searchable, filterable guest list</li>
+            <li>Check-in on the day of the event</li>
+            <li>Export attendees to a spreadsheet</li>
+            <li>Remove a person's data on request</li>
+          </ul>
+        </div>
+        <div class="cap">
+          <h3>Team</h3>
+          <ul>
+            <li>Invite colleagues by email</li>
+            <li>Admin and Staff roles</li>
+            <li>Change roles or remove members</li>
+            <li>Access scoped to each organization</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAFEGUARDS -->
+    <section>
+      <div class="safe">
+        <div class="section-head" style="margin-bottom:0;">
+          <p class="eyebrow">Built-in safeguards</p>
+          <h2>Trust is part of the product, not an add-on.</h2>
+          <p>These protections are designed in from day one — the reassurances a client
+             will ask about before they put their guests' details in.</p>
+        </div>
+        <div class="grid cols-3">
+          <div class="guard">
+            <div class="stamp">✓</div>
+            <div>
+              <h3>Strict separation</h3>
+              <p>No organization can ever see or touch another's events, attendees, or team.</p>
+            </div>
+          </div>
+          <div class="guard">
+            <div class="stamp">✓</div>
+            <div>
+              <h3>Verified sign-ups</h3>
+              <p>New organizations confirm their email, and public endpoints are rate-limited against abuse.</p>
+            </div>
+          </div>
+          <div class="guard">
+            <div class="stamp">✓</div>
+            <div>
+              <h3>Instant access control</h3>
+              <p>Remove a teammate and their access ends immediately — roles are checked on every action.</p>
+            </div>
+          </div>
+          <div class="guard">
+            <div class="stamp">✓</div>
+            <div>
+              <h3>Right to be forgotten</h3>
+              <p>A registrant's personal details can be truly erased while attendance counts stay accurate.</p>
+            </div>
+          </div>
+          <div class="guard">
+            <div class="stamp">✓</div>
+            <div>
+              <h3>Clear accountability</h3>
+              <p>Exports and deletions of personal data are recorded, so there's always a trail.</p>
+            </div>
+          </div>
+          <div class="guard">
+            <div class="stamp">✓</div>
+            <div>
+              <h3>Privacy by design</h3>
+              <p>A privacy notice at sign-up, encrypted connections, and a GDPR-aware data model.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCOPE -->
+    <section class="prose">
+      <div class="section-head">
+        <p class="eyebrow">Not in the first release</p>
+        <h2>What we're deliberately leaving for later.</h2>
+        <p>Naming this up front keeps expectations honest. These are planned directions,
+           not gaps we overlooked.</p>
+      </div>
+      <div class="scope-list">
+        <span>Paid tickets &amp; payments</span>
+        <span>Custom domains</span>
+        <span>Social / Google login</span>
+        <span>Attendee self-service portal</span>
+        <span>Automatic waitlist promotion</span>
+        <span>Automatic data cleanup</span>
+        <span>Advanced bot protection</span>
+        <span>Reminder emails &amp; analytics</span>
+      </div>
+    </section>
+
+    <footer>
+      <div class="foot-row">
+        <span>Regista — Event Registration Platform</span>
+        <span>Status: <b>Approved for build</b> · Reviewed for delivery, security &amp; privacy</span>
+      </div>
+    </footer>
+
+  </div>
+</div>
