@@ -197,6 +197,30 @@ redemption sets the tenant `ACTIVE` and marks the token used → user signs in.
 - *Known gap:* a PENDING tenant holds its slug until manually cleaned up — reclaiming slugs
   from expired, unverified signups is deferred.
 
+## 8c. Registration capacity (M3)
+
+The one piece of M3 with real correctness risk is the last-place race. Two people
+submitting at once must not both take the final seat.
+
+`app/[domain]/[eventSlug]/actions.ts` runs the check inside a transaction that first takes a
+row lock on the event:
+
+```ts
+await tx.$queryRaw`SELECT id FROM "Event" WHERE id = ${event.id} FOR UPDATE`;
+```
+
+Concurrent registrations for the same event then serialise behind that lock, so the
+confirmed-count read cannot be stale. Without it, two transactions at READ COMMITTED both
+see the last place as free.
+
+This is verified, not assumed: a concurrency test fired 20 simultaneous attempts at a
+5-place event. With the lock, exactly 5 were confirmed; with the lock removed as a control,
+17 were confirmed. Re-run that comparison if this transaction is ever refactored — a test
+that only passes the "with lock" case can pass vacuously.
+
+Duplicates rely on the `(eventId, email)` unique index; the action catches Prisma's `P2002`
+and reports it as "already signed up" rather than failing.
+
 ## 9. Security & privacy (build-time requirements)
 
 These are acceptance criteria, not optional. Full detail lives in the project plan; the
@@ -219,6 +243,8 @@ essentials:
 - **M1 — done.** Scaffold + subdomain routing + credentials auth + DB-checked isolation.
 - **M2 — done.** Self-serve signup with live slug availability, reserved-slug blocklist,
   hashed single-use verification tokens, email-gated tenant activation, rate limiting.
+- **M3 — done.** Event CRUD and lifecycle, public event pages, registration with
+  row-locked capacity enforcement, waitlists, dedupe, confirmation emails.
 - **M3** — events CRUD + public registration (transactional capacity, waitlist).
 - **M4** — attendee management (search, check-in, CSV export, erasure, audit log).
 - **M5** — email (Resend + React Email; console fallback in dev).

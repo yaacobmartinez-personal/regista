@@ -9,8 +9,52 @@ Nothing has been publicly released yet. Entries are grouped by build milestone
 
 ## [Unreleased]
 
-Next up: **M3 — events CRUD and public registration** (transactional capacity
-checks, waitlists, shareable registration pages).
+Next up: **M4 — attendee management** (searchable guest list, check-in, CSV
+export, erasure, audit log).
+
+## [M3] — Events and public registration — 2026-07-28
+
+Organizers can publish events, and the public can sign up for them. This is the
+first milestone where Regista does the job it exists for.
+
+### Added
+
+- Event management in the dashboard: create, edit, and delete events with a
+  title, description, start and end times, optional capacity, and a waitlist
+  toggle.
+- Draft → Published → Closed lifecycle. Publishing opens the event's public
+  registration page; closing stops sign-ups.
+- Event list showing status, scheduled time, and confirmed registrations against
+  capacity, with publish and close controls.
+- Public event page at `<organization>.<domain>/<event>` with the registration
+  form, remaining places, and a shareable link.
+- Public listing of an organization's published events on its home page.
+- Waitlist support: when an event is full and a waitlist is enabled, sign-ups
+  join the waitlist and are told so plainly.
+- Confirmation email on registration, worded differently for confirmed and
+  waitlisted places.
+- Event links are derived from the title and made unique within the
+  organization, so two events can share a name without clashing.
+
+### Security
+
+- Capacity is enforced under a database row lock, so simultaneous sign-ups for
+  the last place cannot oversell it. Verified with a concurrency test: 20
+  simultaneous attempts on a 5-place event confirmed exactly 5, while the same
+  test without the lock oversold to 17.
+- One sign-up per email address per event, enforced by the database and reported
+  as a friendly message rather than an error.
+- Draft and closed events are not reachable publicly.
+- Public registration is rate limited per address.
+- Event forms cannot set the organization, status, or check-in fields; those are
+  applied server-side only.
+- Registrations, events, and counts are read and written scoped to the
+  organization, never by id alone.
+
+### Privacy
+
+- The registration form states what is collected, why, and that the organizer can
+  remove the details on request.
 
 ## [M2] — Self-serve tenant signup — 2026-07-28
 
@@ -108,7 +152,12 @@ Deliberately deferred; tracked here so they are not mistaken for oversights.
 - Verification does not sign the user in; they sign in with the password they
   just chose.
 - Registrants cannot manage their own registration, and waitlists do not promote
-  automatically when a place frees up.
+  automatically when a place frees up; an organizer must act.
+- Event times are entered and displayed in the viewer's timezone with no explicit
+  timezone control, so organizers and attendees in different regions see
+  different local times for the same event.
+- The registration form collects a name and email only. Per-event custom
+  questions are not implemented.
 - Email uses plain-text bodies. Templates and a verified sending domain arrive
   with M5.
 - No payments, custom domains, social sign-in, or CAPTCHA.
