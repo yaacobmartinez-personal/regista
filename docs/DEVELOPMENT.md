@@ -158,6 +158,10 @@ tenants (`acme`, `beta`) so you can test isolation. See the README for login det
   `node`). Prefer `.mjs` for one-off scripts.
 - **Routing file is `proxy.ts`, not `middleware.ts`** (Next 16 convention). Keep it
   edge-safe — no DB/auth imports.
+- **A `"use server"` module may only export async functions.** Exporting a `const` (or
+  anything else) from an actions file breaks *all* its exports with a confusing "module has
+  no exports at all" build error. Put shared constants/types in a sibling plain module —
+  see [`app/home/signup/shared.ts`](../app/home/signup/shared.ts).
 - **Docker Desktop can't be started programmatically** — start it from the desktop before
   DB commands.
 - **Windows PowerShell 5.1 has no `&&`.** Run commands separately, or chain with `;` (which
@@ -168,6 +172,30 @@ tenants (`acme`, `beta`) so you can test isolation. See the README for login det
   `checkedInAt` directly (no mass assignment).
 
 ---
+
+## 8b. Signup & verification (M2)
+
+Flow: apex `/signup` → creates `User` + **PENDING** `Tenant` + ADMIN `Membership` +
+`VerificationToken` in one transaction → emails a link to `app.<root>/verify?token=…` →
+redemption sets the tenant `ACTIVE` and marks the token used → user signs in.
+
+- **Tokens** ([`lib/tokens.ts`](../lib/tokens.ts)): 256-bit random, emailed raw, stored only
+  as a SHA-256 hash, single-use (`usedAt`), 24-hour expiry.
+- **Email** ([`lib/email.ts`](../lib/email.ts)): one `sendEmail()` seam. With no
+  `RESEND_API_KEY` it prints to the server console — copy the link from there in dev.
+  M5 swaps the transport for React Email templates.
+- **Rate limiting** ([`lib/rate-limit.ts`](../lib/rate-limit.ts)): in-process fixed window
+  (signup 5/hr/IP, resend 3/15min/IP). No new infrastructure, but counters are per-instance
+  and reset on restart — swap for Redis behind the same `rateLimit()` signature before
+  running more than one instance.
+- **Verification lives on the `app.` subdomain** so it shares the host the session cookie is
+  scoped to. Redemption does *not* auto-sign-in: that would need a provider that trusts a
+  token, so the user signs in with the password they just chose.
+- **No account enumeration:** signing up with an existing email never overwrites that
+  account's password and returns the same response as a fresh signup.
+- A **PENDING** tenant's public pages 404 (`resolveActiveTenant` requires `ACTIVE`).
+- *Known gap:* a PENDING tenant holds its slug until manually cleaned up — reclaiming slugs
+  from expired, unverified signups is deferred.
 
 ## 9. Security & privacy (build-time requirements)
 
@@ -189,7 +217,8 @@ essentials:
 ## 10. Milestone roadmap
 
 - **M1 — done.** Scaffold + subdomain routing + credentials auth + DB-checked isolation.
-- **M2** — self-serve, email-verified tenant signup.
+- **M2 — done.** Self-serve signup with live slug availability, reserved-slug blocklist,
+  hashed single-use verification tokens, email-gated tenant activation, rate limiting.
 - **M3** — events CRUD + public registration (transactional capacity, waitlist).
 - **M4** — attendee management (search, check-in, CSV export, erasure, audit log).
 - **M5** — email (Resend + React Email; console fallback in dev).

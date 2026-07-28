@@ -145,10 +145,16 @@ model AuditLog {
 }
 
 // Owner email verification at signup (and future flows).
+// `token` stores a SHA-256 hash of the value emailed to the user, so a database
+// leak cannot be replayed as a verification link.
 model VerificationToken {
-  identifier String
+  identifier String // the email address being verified
   token      String   @unique
+  tenantId   String? // tenant to activate on success (null for non-signup flows)
   expiresAt  DateTime
+  usedAt     DateTime? // single-use: set on redemption
+  createdAt  DateTime  @default(now())
 
   @@id([identifier, token])
+  @@index([tenantId])
 }
