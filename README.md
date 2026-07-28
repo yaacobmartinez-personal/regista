@@ -6,6 +6,7 @@ manage attendees and invite teammates; registrants get email confirmations.
 
 > **New here?** Read the plain-language [product overview](docs/business-explainer.html),
 > the [requirements](docs/REQUIREMENTS.md), and the [developer guide](docs/DEVELOPMENT.md).
+> Recent changes and known gaps live in the [changelog](CHANGELOG.md).
 
 ## Tech stack
 
@@ -108,6 +109,7 @@ docs/            Requirements, dev guide, product overview
 
 ## Status
 
-**M1 complete** — subdomain routing, credentials auth, and DB-checked tenant isolation are
-working. See the [developer guide](docs/DEVELOPMENT.md) for architecture and the milestone
-roadmap in the project plan.
+**M2 complete** — subdomain routing, credentials auth, DB-checked tenant isolation, and
+self-serve email-verified signup are working. Events and public registration (M3) are next.
+See the [developer guide](docs/DEVELOPMENT.md) for architecture and the
+[changelog](CHANGELOG.md) for what has shipped.
