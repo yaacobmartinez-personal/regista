@@ -1,36 +1,113 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Regista
 
-## Getting Started
+Multitenant event registration platform. Each organization ("tenant") gets its own
+subdomain, publishes events, and collects free registrations from the public. Organizers
+manage attendees and invite teammates; registrants get email confirmations.
 
-First, run the development server:
+> **New here?** Read the plain-language [product overview](docs/business-explainer.html),
+> the [requirements](docs/REQUIREMENTS.md), and the [developer guide](docs/DEVELOPMENT.md).
+
+## Tech stack
+
+- **Next.js 16** (App Router) — full-stack, Route Handlers + Server Actions
+- **Postgres** + **Prisma 6** (ORM)
+- **Auth.js / NextAuth v5** — credentials auth, argon2 password hashing
+- **Tailwind CSS 4**, TypeScript
+- **Resend** + React Email (wired in a later milestone)
+
+## Prerequisites
+
+- Node.js 20+
+- pnpm 9+
+- Docker Desktop (for local Postgres) — **must be started manually** before the DB commands
+
+## Getting started
+
+Run each command on its own (Windows PowerShell 5.1 does not support `&&` chaining):
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copy the env template and adjust if needed:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+copy .env.example .env
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Start Postgres (Docker Desktop must already be running):
 
-## Learn More
+```bash
+docker compose up -d
+```
 
-To learn more about Next.js, take a look at the following resources:
+Apply migrations and seed demo data:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm db:migrate
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+pnpm db:seed
+```
 
-## Deploy on Vercel
+Start the dev server:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+pnpm dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Local URLs
+
+The dev server serves the apex and all subdomains on port 3000. `*.localhost` resolves to
+`127.0.0.1` automatically in modern browsers.
+
+| URL | Surface |
+| --- | --- |
+| `http://localhost:3000` | Marketing / landing |
+| `http://app.localhost:3000/login` | Organizer dashboard (sign in) |
+| `http://acme.localhost:3000` | A tenant's public pages |
+
+## Seed accounts
+
+Password for all seeded organizers: `password123`
+
+| Email | Organization | Role |
+| --- | --- | --- |
+| `admin@acme.test` | acme | ADMIN |
+| `admin@beta.test` | beta | ADMIN |
+
+## Scripts
+
+| Script | Description |
+| --- | --- |
+| `pnpm dev` | Start the dev server (apex + subdomains, port 3000) |
+| `pnpm build` | Production build |
+| `pnpm db:up` | Start the Postgres container |
+| `pnpm db:migrate` | Create/apply migrations (`prisma migrate dev`) |
+| `pnpm db:seed` | Seed demo tenants + accounts |
+| `pnpm db:studio` | Open Prisma Studio |
+| `pnpm db:reset` | Drop, re-migrate, and re-seed the database |
+| `pnpm db:generate` | Regenerate the Prisma client |
+
+## Project structure
+
+```
+app/
+  home/          Marketing (apex)            -> app/home
+  app/           Organizer dashboard          -> app.<root>
+    login/       Sign in
+    o/[slug]/    Tenant-scoped dashboard
+  [domain]/      Tenant public pages          -> <tenant>.<root>
+  api/auth/      NextAuth route handler
+lib/             db, auth, tenant, authz
+prisma/          schema.prisma, migrations, seed.mjs
+proxy.ts         Subdomain routing (Next 16 "proxy" convention)
+docs/            Requirements, dev guide, product overview
+```
+
+## Status
+
+**M1 complete** — subdomain routing, credentials auth, and DB-checked tenant isolation are
+working. See the [developer guide](docs/DEVELOPMENT.md) for architecture and the milestone
+roadmap in the project plan.
