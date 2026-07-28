@@ -221,6 +221,24 @@ that only passes the "with lock" case can pass vacuously.
 Duplicates rely on the `(eventId, email)` unique index; the action catches Prisma's `P2002`
 and reports it as "already signed up" rather than failing.
 
+## 8d. Attendees, export and erasure (M4)
+
+Attendees belong to an event: `/o/<org>/events/<event>/attendees`.
+
+- **CSV export** is a Route Handler (`attendees/export`). Every cell goes through
+  [`lib/csv.ts`](../lib/csv.ts), which prefixes anything starting with `= + - @` or a
+  control character with an apostrophe. Attendee names come from the public, so an
+  unescaped export would hand a spreadsheet a live formula. Responses are `no-store`.
+- **Erasure** (`eraseRegistration`) nulls the name and custom fields, sets
+  `anonymizedAt`, and rewrites the email to `deleted+<id>@anon.invalid` — unique enough
+  to satisfy the `(eventId, email)` index and not reversible. The row survives so
+  capacity and attendance figures stay correct; the UI shows "Details erased" and the
+  export writes `(erased)`.
+- **Audit** ([`lib/audit.ts`](../lib/audit.ts)) records exports and erasures with the
+  acting user. It stores identifiers only — never the personal data itself.
+- Writes match on `(id, tenantId)` via `updateMany`/`findFirst`, so an id from another
+  organization affects nothing. Cross-tenant attendee pages and exports return 404.
+
 ## 9. Security & privacy (build-time requirements)
 
 These are acceptance criteria, not optional. Full detail lives in the project plan; the
@@ -245,6 +263,8 @@ essentials:
   hashed single-use verification tokens, email-gated tenant activation, rate limiting.
 - **M3 — done.** Event CRUD and lifecycle, public event pages, registration with
   row-locked capacity enforcement, waitlists, dedupe, confirmation emails.
+- **M4 — done.** Attendee list with search/filter/paging, check-in, CSV export with
+  formula-injection escaping, registrant erasure, audit logging.
 - **M3** — events CRUD + public registration (transactional capacity, waitlist).
 - **M4** — attendee management (search, check-in, CSV export, erasure, audit log).
 - **M5** — email (Resend + React Email; console fallback in dev).

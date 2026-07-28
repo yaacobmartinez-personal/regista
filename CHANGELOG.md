@@ -9,8 +9,40 @@ Nothing has been publicly released yet. Entries are grouped by build milestone
 
 ## [Unreleased]
 
-Next up: **M4 — attendee management** (searchable guest list, check-in, CSV
-export, erasure, audit log).
+Next up: **M5 — email templates** (React Email, a verified sending domain, and
+richer confirmation messages).
+
+## [M4] — Attendee management — 2026-07-28
+
+Organizers can now work with the people who signed up: find them, check them in
+on the day, take the list away, and remove someone's details on request.
+
+### Added
+
+- Attendee list for each event, searchable by name or email and filterable by
+  status, with paging for large events.
+- Running totals of registrations against capacity and how many have checked in.
+- One-click check-in, and an undo for when it was the wrong person.
+- CSV export of an event's attendees.
+- Erasure: an organizer can remove a registrant's personal details on request.
+  The attendance record is kept so counts stay accurate, but the name and email
+  are gone and the row reads "Details erased".
+
+### Security
+
+- Spreadsheet formula injection is neutralised on export. A registrant who signs
+  up as `=cmd|'/c calc'!A1` exports as inert text rather than a live formula.
+- Exports and erasures are recorded in the audit log with who did it and when.
+- Exports are sent with no-store so personal data is not cached.
+- Attendee pages and exports are scoped to the organization: requesting another
+  organization's attendee list or export returns 404, verified in testing.
+- Erasure replaces the email with a non-reversible placeholder, so the original
+  address is not recoverable from the row.
+
+### Changed
+
+- Removed the placeholder "Attendees" item from the dashboard navigation.
+  Attendees belong to an event, so they are reached from the event itself.
 
 ## [M3] — Events and public registration — 2026-07-28
 

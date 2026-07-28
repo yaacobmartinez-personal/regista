@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMembership } from "@/lib/authz";
 import { prisma } from "@/lib/db";
@@ -59,6 +60,12 @@ export default async function EditEventPage({
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            href={`/o/${ctx.tenant.slug}/events/${event.slug}/attendees`}
+            className="rounded-lg border border-line-strong px-3 py-2 text-sm font-medium transition-colors hover:bg-panel"
+          >
+            Attendees
+          </Link>
           <form action={setEventStatus}>
             <input type="hidden" name="tenantSlug" value={ctx.tenant.slug} />
             <input type="hidden" name="eventId" value={event.id} />

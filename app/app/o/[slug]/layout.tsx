@@ -29,9 +29,6 @@ export default async function OrgLayout({
           >
             Events
           </Link>
-          <span className="cursor-not-allowed py-3 text-sm text-faint" title="Coming in M4">
-            Attendees
-          </span>
           <span className="cursor-not-allowed py-3 text-sm text-faint" title="Coming in M6">
             Team
           </span>
