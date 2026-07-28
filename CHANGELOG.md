@@ -12,6 +12,30 @@ Nothing has been publicly released yet. Entries are grouped by build milestone
 Next up: **M5 — email templates** (React Email, a verified sending domain, and
 richer confirmation messages).
 
+### Fixed
+
+- **Event times now mean the same thing to everyone.** Each event carries its own
+  timezone, chosen when the event is created and defaulting to the organizer's.
+  Times are shown in that timezone with the zone alongside them, so an attendee
+  abroad sees the hour the organizer scheduled instead of it shifted into their
+  own local time.
+- **Signing in with more than one organization reached the landing page instead
+  of the organization chooser.** The chooser now has its own address, and sign-in
+  sends the browser there properly. Signing in with a single organization still
+  goes straight to it.
+- **An unconfirmed signup held its address forever.** Once the confirmation
+  window has passed with the address still unverified, it is treated as abandoned
+  and someone else can claim it. Addresses still awaiting confirmation inside the
+  window stay protected.
+- Two people submitting the same new address at the same moment now get a clear
+  message rather than an error page.
+
+### Changed
+
+- Event times entered before this release were interpreted in the server's
+  timezone and are now recorded as UTC. Existing events default to UTC; check any
+  that were already scheduled and set the intended timezone on them.
+
 ## [M4] — Attendee management — 2026-07-28
 
 Organizers can now work with the people who signed up: find them, check them in
@@ -177,19 +201,18 @@ until the owner confirms their email.
 
 Deliberately deferred; tracked here so they are not mistaken for oversights.
 
-- A tenant awaiting verification holds its address indefinitely. Reclaiming
-  addresses from expired, unverified signups is not implemented.
+- Abandoned addresses are only released when someone else tries to claim one.
+  There is no background job reaping unverified signups, so the rows linger.
 - Rate limiting is per-process and resets on restart. Running more than one
   instance needs a shared store (Redis) behind the same interface.
 - Verification does not sign the user in; they sign in with the password they
   just chose.
 - Registrants cannot manage their own registration, and waitlists do not promote
   automatically when a place frees up; an organizer must act.
-- Event times are entered and displayed in the viewer's timezone with no explicit
-  timezone control, so organizers and attendees in different regions see
-  different local times for the same event.
 - The registration form collects a name and email only. Per-event custom
   questions are not implemented.
+- Event times are shown in the event's timezone only. Attendees are not offered
+  a "in your local time" conversion alongside it.
 - Email uses plain-text bodies. Templates and a verified sending domain arrive
   with M5.
 - No payments, custom domains, social sign-in, or CAPTCHA.

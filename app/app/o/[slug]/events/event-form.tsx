@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { createEvent, updateEvent } from "./actions";
 import type { EventFormState } from "./shared";
 
@@ -10,21 +10,13 @@ export type EventFormValues = {
   slug: string;
   title: string;
   description: string | null;
-  startsAt: string; // ISO
-  endsAt: string | null; // ISO
+  /** Wall-clock values already expressed in the event's own timezone. */
+  startsAtLocal: string;
+  endsAtLocal: string | null;
+  timezone: string;
   capacity: number | null;
   waitlistEnabled: boolean;
 };
-
-/** Format an ISO instant for a datetime-local input in the viewer's timezone. */
-function toLocalInputValue(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`;
-}
 
 function slugifyTitle(value: string): string {
   return value
@@ -43,10 +35,12 @@ const errorText = "text-xs text-red-600 dark:text-red-400";
 export function EventForm({
   tenantSlug,
   publicHost,
+  timeZones,
   event,
 }: {
   tenantSlug: string;
   publicHost: string;
+  timeZones: string[];
   event?: EventFormValues;
 }) {
   const isEdit = Boolean(event);
@@ -59,6 +53,10 @@ export function EventForm({
   const [slug, setSlug] = useState(event?.slug ?? "");
   const [slugEdited, setSlugEdited] = useState(Boolean(event));
   const effectiveSlug = slugEdited ? slug : slugifyTitle(title);
+
+  // For a new event, preselect the organizer's own zone once the control mounts.
+  // Done through the ref rather than server-rendered so the markup stays stable.
+  const zonePreselected = useRef(false);
 
   return (
     <form action={formAction} className="mt-8 flex max-w-xl flex-col gap-5">
@@ -117,8 +115,7 @@ export function EventForm({
             name="startsAt"
             type="datetime-local"
             required
-            defaultValue={toLocalInputValue(event?.startsAt)}
-            suppressHydrationWarning
+            defaultValue={event?.startsAtLocal ?? ""}
             className={field}
           />
           {state?.fieldErrors?.startsAt ? (
@@ -133,8 +130,7 @@ export function EventForm({
           <input
             name="endsAt"
             type="datetime-local"
-            defaultValue={toLocalInputValue(event?.endsAt)}
-            suppressHydrationWarning
+            defaultValue={event?.endsAtLocal ?? ""}
             className={field}
           />
           {state?.fieldErrors?.endsAt ? (
@@ -142,6 +138,35 @@ export function EventForm({
           ) : null}
         </label>
       </div>
+
+      <label className="flex flex-col gap-1.5 text-sm">
+        <span className="font-medium">Timezone</span>
+        <select
+          name="timezone"
+          defaultValue={event?.timezone ?? "UTC"}
+          ref={(el) => {
+            if (!el || zonePreselected.current) return;
+            zonePreselected.current = true;
+            if (event) return;
+            const local = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (local && timeZones.includes(local)) el.value = local;
+          }}
+          className={field}
+        >
+          {timeZones.map((zone) => (
+            <option key={zone} value={zone}>
+              {zone.replace(/_/g, " ")}
+            </option>
+          ))}
+        </select>
+        <span className="text-xs text-muted">
+          The times above are local to the event. Everyone sees them in this
+          timezone, wherever they are.
+        </span>
+        {state?.fieldErrors?.timezone ? (
+          <span className={errorText}>{state.fieldErrors.timezone}</span>
+        ) : null}
+      </label>
 
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="font-medium">

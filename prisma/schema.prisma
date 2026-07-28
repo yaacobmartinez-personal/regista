@@ -97,6 +97,9 @@ model Event {
   description     String?
   startsAt        DateTime
   endsAt          DateTime?
+  // IANA zone the event happens in. Instants above are UTC; this decides the
+  // wall-clock time everyone sees, so it is the same for organizer and attendee.
+  timezone        String      @default("UTC")
   capacity        Int?
   waitlistEnabled Boolean     @default(false)
   status          EventStatus @default(DRAFT)

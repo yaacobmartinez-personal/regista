@@ -239,6 +239,34 @@ Attendees belong to an event: `/o/<org>/events/<event>/attendees`.
 - Writes match on `(id, tenantId)` via `updateMany`/`findFirst`, so an id from another
   organization affects nothing. Cross-tenant attendee pages and exports return 404.
 
+## 8e. Timezones
+
+Each `Event` carries an IANA `timezone`; `startsAt`/`endsAt` are UTC instants.
+[`lib/time.ts`](../lib/time.ts) converts between the two:
+
+- `zonedInputToUtc` turns a `datetime-local` wall-clock value plus the event's zone into
+  an instant. It applies the offset twice — the second pass corrects a first-pass result
+  that landed on the other side of a DST boundary.
+- `utcToZonedInput` renders an instant back into a form value, so editing round-trips.
+- `formatInZone` / `zoneLabel` are used for *all* event-time display. Never call
+  `toLocaleString` on an event time without passing the event's zone: that reintroduces
+  the bug where organizer and attendee saw different hours.
+
+Form values are computed **server-side** in the event's zone and passed to the client
+component, which is why the datetime inputs need no hydration suppression.
+
+## 8f. Redirects and the subdomain rewrite
+
+A `redirect()` inside a **server action** is resolved against the route tree directly —
+`proxy.ts` does not run for it. Dashboard paths like `/orgs` only exist as `/app/orgs`
+after the rewrite, so such a redirect lands on a 404 (and can even match an unrelated
+tenant route such as `app/[domain]`).
+
+Where an action needs to send the user to a rewritten path, return the destination and
+navigate on the client instead — see [`app/app/login/actions.ts`](../app/app/login/actions.ts)
+and the `useEffect` in its page. Page-level (non-action) redirects are fine: they reach the
+browser as a real redirect and pass back through the proxy.
+
 ## 9. Security & privacy (build-time requirements)
 
 These are acceptance criteria, not optional. Full detail lives in the project plan; the

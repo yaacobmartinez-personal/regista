@@ -1,38 +1,44 @@
 "use server";
 
 import { AuthError } from "next-auth";
-import { redirect } from "next/navigation";
 import { signIn } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import type { LoginState } from "./shared";
 
+/**
+ * Sign in and work out where to land.
+ *
+ * The destination is returned rather than passed to `redirect()`. Dashboard
+ * routes are reached through a subdomain rewrite in `proxy.ts`, and a redirect
+ * issued inside a server action is resolved against the route tree directly —
+ * the rewrite never runs, so `/orgs` would not be found. Handing the path back
+ * lets the browser navigate for real, which does go through the proxy.
+ */
 export async function authenticate(
-  _prev: string | undefined,
+  _prev: LoginState | undefined,
   formData: FormData,
-): Promise<string | undefined> {
+): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").toLowerCase();
   const password = String(formData.get("password") ?? "");
 
   try {
-    // redirect:false so we can compute the destination ourselves below.
     await signIn("credentials", { email, password, redirect: false });
   } catch (error) {
     if (error instanceof AuthError) {
-      return "Invalid email or password.";
+      return { error: "Invalid email or password." };
     }
     throw error;
   }
 
-  // Signed in. Send a single-org user straight to their dashboard (an
-  // unambiguous path); show the org picker only when there are 0 or several.
-  // redirect() must stay outside the try so its control-flow throw propagates.
+  // One organization: go straight to it. Otherwise offer the chooser.
   const memberships = await prisma.membership.findMany({
     where: { user: { email } },
     include: { tenant: true },
     orderBy: { createdAt: "asc" },
   });
 
-  if (memberships.length === 1) {
-    redirect(`/o/${memberships[0].tenant.slug}`);
-  }
-  redirect("/");
+  return {
+    redirectTo:
+      memberships.length === 1 ? `/o/${memberships[0].tenant.slug}` : "/orgs",
+  };
 }

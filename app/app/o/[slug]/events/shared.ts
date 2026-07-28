@@ -4,6 +4,9 @@
 export type EventFormState = {
   error?: string;
   fieldErrors?: Partial<
-    Record<"title" | "slug" | "description" | "startsAt" | "endsAt" | "capacity", string>
+    Record<
+      "title" | "slug" | "description" | "startsAt" | "endsAt" | "timezone" | "capacity",
+      string
+    >
   >;
 };

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { VERIFICATION_TTL_HOURS } from "@/lib/tokens";
 
 const RESERVED_SUBDOMAINS = new Set([
   "www",
@@ -42,6 +43,40 @@ export function subdomainFromHost(host: string | null): string | null {
     return hostname.slice(0, hostname.length - rootDomain.length - 1);
   }
   return null;
+}
+
+/**
+ * Whether an address can be claimed.
+ *
+ * A signup that is never verified would otherwise hold its address forever,
+ * which is both a slow leak and a way to squat names deliberately. Once the
+ * verification window has passed with the tenant still unverified, the address
+ * is treated as abandoned and can be taken by someone else.
+ */
+export async function slugAvailability(
+  slug: string,
+): Promise<{ state: "free" } | { state: "taken" } | { state: "abandoned"; tenantId: string }> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { slug },
+    select: { id: true, status: true, createdAt: true },
+  });
+  if (!tenant) return { state: "free" };
+
+  const windowClosed =
+    tenant.createdAt.getTime() + VERIFICATION_TTL_HOURS * 60 * 60 * 1000 <= Date.now();
+
+  if (tenant.status === "PENDING" && windowClosed) {
+    return { state: "abandoned", tenantId: tenant.id };
+  }
+  return { state: "taken" };
+}
+
+/** Release an abandoned signup so its address can be reused. */
+export async function releaseAbandonedTenant(tenantId: string): Promise<void> {
+  // Verification tokens carry tenantId without a foreign key, so they are
+  // removed explicitly; memberships cascade with the tenant.
+  await prisma.verificationToken.deleteMany({ where: { tenantId } });
+  await prisma.tenant.delete({ where: { id: tenantId } });
 }
 
 /** Look up an ACTIVE tenant by slug. Returns null if missing or not active. */

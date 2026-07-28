@@ -61,6 +61,7 @@ async function main() {
       title: "Acme Summer Meetup",
       description: "An evening of talks and networking.",
       startsAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+      timezone: "Europe/London",
       capacity: 100,
       waitlistEnabled: true,
       status: "PUBLISHED",

@@ -21,6 +21,7 @@ function parseEventForm(formData: FormData) {
     description: formData.get("description") ?? undefined,
     startsAt: formData.get("startsAt"),
     endsAt: formData.get("endsAt") ?? undefined,
+    timezone: formData.get("timezone") ?? undefined,
     capacity: formData.get("capacity") ?? undefined,
     waitlistEnabled: formData.get("waitlistEnabled") === "on",
   });
@@ -60,6 +61,7 @@ export async function createEvent(
       description: data.description,
       startsAt: data.startsAt,
       endsAt: data.endsAt,
+      timezone: data.timezone,
       capacity: data.capacity,
       waitlistEnabled: data.waitlistEnabled,
       status: "DRAFT", // publishing is a separate, explicit step
@@ -100,6 +102,7 @@ export async function updateEvent(
       description: data.description,
       startsAt: data.startsAt,
       endsAt: data.endsAt,
+      timezone: data.timezone,
       capacity: data.capacity,
       waitlistEnabled: data.waitlistEnabled,
     },

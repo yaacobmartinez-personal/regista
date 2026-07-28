@@ -1,12 +1,23 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { Logo } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authenticate } from "./actions";
+import type { LoginState } from "./shared";
 
 export default function LoginPage() {
-  const [error, formAction, pending] = useActionState(authenticate, undefined);
+  const [state, formAction, pending] = useActionState<LoginState | undefined, FormData>(
+    authenticate,
+    undefined,
+  );
+  const error = state?.error;
+  const redirectTo = state?.redirectTo;
+
+  // A full navigation, so the request passes through the subdomain rewrite.
+  useEffect(() => {
+    if (redirectTo) window.location.assign(redirectTo);
+  }, [redirectTo]);
 
   return (
     <main className="relative grid min-h-screen place-items-center bg-canvas px-4 py-16">
@@ -60,10 +71,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={pending}
+            disabled={pending || Boolean(redirectTo)}
             className="mt-1 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           >
-            {pending ? "Signing in…" : "Sign in"}
+            {pending || redirectTo ? "Signing in…" : "Sign in"}
           </button>
         </form>
       </div>

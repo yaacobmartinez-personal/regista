@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMembership } from "@/lib/authz";
 import { prisma } from "@/lib/db";
+import { supportedTimeZones, utcToZonedInput } from "@/lib/time";
 import { EventForm } from "../event-form";
 import { deleteEvent, setEventStatus } from "../actions";
 
@@ -100,13 +101,17 @@ export default async function EditEventPage({
       <EventForm
         tenantSlug={ctx.tenant.slug}
         publicHost={publicHost}
+        timeZones={supportedTimeZones()}
         event={{
           id: event.id,
           slug: event.slug,
           title: event.title,
           description: event.description,
-          startsAt: event.startsAt.toISOString(),
-          endsAt: event.endsAt ? event.endsAt.toISOString() : null,
+          startsAtLocal: utcToZonedInput(event.startsAt, event.timezone),
+          endsAtLocal: event.endsAt
+            ? utcToZonedInput(event.endsAt, event.timezone)
+            : null,
+          timezone: event.timezone,
           capacity: event.capacity,
           waitlistEnabled: event.waitlistEnabled,
         }}

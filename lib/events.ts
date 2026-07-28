@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { isValidTimeZone, zonedInputToUtc } from "@/lib/time";
 
 /** Turn a title into a URL segment. Mirrors the client-side preview. */
 export function slugifyTitle(value: string): string {
@@ -49,32 +50,41 @@ const optionalText = z
   .optional()
   .transform((v) => (v ? v : null));
 
-/** Datetime-local inputs submit "YYYY-MM-DDTHH:mm" with no zone. */
-const localDateTime = z
+/** "YYYY-MM-DDTHH:mm" from a datetime-local input — a wall-clock time, no zone. */
+const wallClock = z
   .string()
   .trim()
   .min(1, "Pick a start date and time.")
-  .refine((v) => !Number.isNaN(Date.parse(v)), "That date doesn't look right.")
-  .transform((v) => new Date(v));
-
-const optionalLocalDateTime = z
-  .string()
-  .trim()
-  .optional()
-  .transform((v) => (v ? new Date(v) : null))
-  .refine((v) => v === null || !Number.isNaN(v.getTime()), "That date doesn't look right.");
+  .refine((v) => !Number.isNaN(Date.parse(`${v}Z`)), "That date doesn't look right.");
 
 /**
  * Event form input. Deliberately excludes tenantId and status so neither can be
  * set from a request body; both are applied server-side.
+ *
+ * The submitted times are wall-clock values in the event's own timezone; they
+ * are converted to UTC instants here so every viewer sees the same local time
+ * for the event regardless of where they are.
  */
 export const eventInputSchema = z
   .object({
     title: z.string().trim().min(2, "Give the event a title.").max(140),
     slug: z.string().trim().max(63).optional(),
     description: optionalText,
-    startsAt: localDateTime,
-    endsAt: optionalLocalDateTime,
+    startsAt: wallClock,
+    endsAt: z
+      .string()
+      .trim()
+      .optional()
+      .transform((v) => (v ? v : null))
+      .refine(
+        (v) => v === null || !Number.isNaN(Date.parse(`${v}Z`)),
+        "That date doesn't look right.",
+      ),
+    timezone: z
+      .string()
+      .trim()
+      .default("UTC")
+      .refine(isValidTimeZone, "Pick a timezone for the event."),
     capacity: z
       .string()
       .trim()
@@ -86,6 +96,11 @@ export const eventInputSchema = z
       ),
     waitlistEnabled: z.coerce.boolean().default(false),
   })
+  .transform((data) => ({
+    ...data,
+    startsAt: zonedInputToUtc(data.startsAt, data.timezone),
+    endsAt: data.endsAt ? zonedInputToUtc(data.endsAt, data.timezone) : null,
+  }))
   .refine((data) => !data.endsAt || data.endsAt >= data.startsAt, {
     message: "The end time must be after the start time.",
     path: ["endsAt"],

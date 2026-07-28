@@ -12,14 +12,14 @@ export function DashboardHeader({
     <header className="border-b border-line bg-surface">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3">
         <div className="flex min-w-0 items-center gap-3">
-          <Wordmark href="/" />
+          <Wordmark href="/orgs" />
           {org ? (
             <>
               <span className="text-faint" aria-hidden>
                 /
               </span>
               <Link
-                href="/"
+                href="/orgs"
                 className="truncate rounded-lg border border-line px-2.5 py-1 text-sm font-medium transition-colors hover:border-line-strong"
               >
                 {org.name}

@@ -2,17 +2,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { resolveActiveTenant } from "@/lib/tenant";
+import { formatInZone, zoneLabel } from "@/lib/time";
 import { Logo } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-function formatWhen(startsAt: Date): string {
-  return startsAt.toLocaleString("en-GB", {
+function formatWhen(startsAt: Date, timezone: string): string {
+  const when = formatInZone(startsAt, timezone, {
     weekday: "short",
     day: "numeric",
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
   });
+  return `${when} ${zoneLabel(startsAt, timezone)}`;
 }
 
 export default async function TenantPublicHome({
@@ -61,7 +63,7 @@ export default async function TenantPublicHome({
                   <span className="min-w-0">
                     <span className="block text-sm font-medium">{event.title}</span>
                     <span className="mt-0.5 block text-xs text-muted">
-                      {formatWhen(event.startsAt)}
+                      {formatWhen(event.startsAt, event.timezone)}
                     </span>
                   </span>
                   <span className="shrink-0 text-sm text-accent">Register →</span>

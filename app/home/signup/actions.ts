@@ -1,11 +1,17 @@
 "use server";
 
+import { Prisma } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { hash } from "@node-rs/argon2";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { isUsableSlug, isReservedSubdomain } from "@/lib/tenant";
+import {
+  isUsableSlug,
+  isReservedSubdomain,
+  slugAvailability,
+  releaseAbandonedTenant,
+} from "@/lib/tenant";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { createVerificationToken, verificationExpiry } from "@/lib/tokens";
 import { sendEmail } from "@/lib/email";
@@ -67,11 +73,10 @@ export async function checkSlug(
   if (isReservedSubdomain(value)) return { status: "reserved" };
   if (!isUsableSlug(value)) return { status: "invalid" };
 
-  const existing = await prisma.tenant.findUnique({
-    where: { slug: value },
-    select: { id: true },
-  });
-  return { status: existing ? "taken" : "available" };
+  // An abandoned signup's address is offered as available; it is released at
+  // the moment someone actually claims it.
+  const availability = await slugAvailability(value);
+  return { status: availability.state === "taken" ? "taken" : "available" };
 }
 
 export async function signup(
@@ -113,12 +118,12 @@ export async function signup(
     };
   }
 
-  const slugTaken = await prisma.tenant.findUnique({
-    where: { slug },
-    select: { id: true },
-  });
-  if (slugTaken) {
+  const availability = await slugAvailability(slug);
+  if (availability.state === "taken") {
     return { fieldErrors: { slug: "That address is already taken." } };
+  }
+  if (availability.state === "abandoned") {
+    await releaseAbandonedTenant(availability.tenantId);
   }
 
   // An existing account keeps its password: signing up with someone else's
@@ -131,24 +136,36 @@ export async function signup(
 
   const passwordHash = existingUser ? null : await hash(password);
 
-  const tenant = await prisma.$transaction(async (tx) => {
-    const createdTenant = await tx.tenant.create({
-      data: { slug, name: organization, status: "PENDING" },
+  let tenant;
+  try {
+    tenant = await prisma.$transaction(async (tx) => {
+      const createdTenant = await tx.tenant.create({
+        data: { slug, name: organization, status: "PENDING" },
+      });
+
+      const user = existingUser
+        ? existingUser
+        : await tx.user.create({
+            data: { email, passwordHash: passwordHash! },
+            select: { id: true },
+          });
+
+      await tx.membership.create({
+        data: { userId: user.id, tenantId: createdTenant.id, role: "ADMIN" },
+      });
+
+      return createdTenant;
     });
-
-    const user = existingUser
-      ? existingUser
-      : await tx.user.create({
-          data: { email, passwordHash: passwordHash! },
-          select: { id: true },
-        });
-
-    await tx.membership.create({
-      data: { userId: user.id, tenantId: createdTenant.id, role: "ADMIN" },
-    });
-
-    return createdTenant;
-  });
+  } catch (error) {
+    // Someone claimed the address between the check above and this insert.
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return { fieldErrors: { slug: "That address was just taken. Try another." } };
+    }
+    throw error;
+  }
 
   await sendVerification({ email, organization, slug, tenantId: tenant.id });
 

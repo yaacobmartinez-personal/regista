@@ -2,9 +2,11 @@ import Link from "next/link";
 import { requireMembership } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 import { setEventStatus } from "./events/actions";
+import { formatInZone, zoneLabel } from "@/lib/time";
 
-function formatWhen(startsAt: Date): string {
-  return startsAt.toLocaleString("en-GB", {
+/** Always shown in the event's own timezone, so it reads the same for everyone. */
+function formatWhen(startsAt: Date, timezone: string): string {
+  const when = formatInZone(startsAt, timezone, {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -12,6 +14,7 @@ function formatWhen(startsAt: Date): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+  return `${when} ${zoneLabel(startsAt, timezone)}`;
 }
 
 const statusStyles: Record<string, string> = {
@@ -83,7 +86,7 @@ export default async function EventsPage({
                     {event.title}
                   </Link>
                   <p className="mt-0.5 text-xs text-muted">
-                    {formatWhen(event.startsAt)}
+                    {formatWhen(event.startsAt, event.timezone)}
                     {event.capacity ? ` · capacity ${event.capacity}` : " · no limit"}
                   </p>
                 </div>
