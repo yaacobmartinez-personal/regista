@@ -1,51 +1,46 @@
-import { Wordmark } from "@/components/brand";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { Logo } from "@/components/brand";
+import { ScrollProgress } from "@/components/motion/primitives";
+import { MarketingNav } from "@/components/marketing/nav";
+import { Hero } from "@/components/marketing/hero";
+import { HowItWorks } from "@/components/marketing/how-it-works";
+import { Features, Trust, CallToAction } from "@/components/marketing/sections";
 
 export default function MarketingHome() {
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
   const proto = rootDomain.startsWith("localhost") ? "http" : "https";
-  const appUrl = `${proto}://app.${rootDomain}`;
+  const loginUrl = `${proto}://app.${rootDomain}/login`;
+  const signupUrl = `${proto}://${rootDomain}/signup`;
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-5 py-3.5">
-          <Wordmark />
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <a
-              href={`${appUrl}/login`}
-              className="rounded-lg border border-line-strong px-3 py-2 text-sm font-medium transition-colors hover:bg-panel"
-            >
-              Sign in
-            </a>
-          </div>
-        </div>
-      </header>
+      <ScrollProgress />
+      <MarketingNav loginUrl={loginUrl} signupUrl={signupUrl} />
 
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center px-5 py-20">
-        <p className="font-mono text-xs uppercase tracking-widest text-faint">
-          Event registration platform
-        </p>
-        <h1 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">
-          Every organization runs its own event registration.
-        </h1>
-        <p className="mt-5 max-w-prose text-lg text-muted">
-          Give each organizer their own branded registration space — their own
-          address, their own events, their own guest lists.
-        </p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <a
-            href={`${appUrl}/login`}
-            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover"
-          >
-            Organizer sign in
-          </a>
-          <span className="rounded-lg border border-line px-5 py-2.5 text-sm font-medium text-muted">
-            Self-serve signup — coming soon
-          </span>
-        </div>
+      <main className="flex-1">
+        <Hero signupUrl={signupUrl} />
+        <HowItWorks />
+        <Features />
+        <Trust />
+        <CallToAction signupUrl={signupUrl} />
       </main>
+
+      <footer>
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-10 sm:flex-row">
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <Logo className="!h-5 !w-5 !text-[11px]" />
+            <span>Regista</span>
+          </div>
+          <p className="font-mono text-xs text-faint">
+            Event registration for every organization
+          </p>
+          <a
+            href={loginUrl}
+            className="text-sm text-muted transition-colors hover:text-fg"
+          >
+            Organizer sign in →
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }
