@@ -6,7 +6,12 @@ import { prisma } from "@/lib/db";
 import { resolveActiveTenant } from "@/lib/tenant";
 import { registrationInputSchema } from "@/lib/events";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
-import { sendEmail } from "@/lib/email";
+import { sendTemplate } from "@/lib/email";
+import { formatEventWhen } from "@/lib/time";
+import {
+  EventRegistration,
+  eventRegistrationText,
+} from "@/emails/event-registration";
 import type { RegisterState } from "./shared";
 
 /**
@@ -48,13 +53,21 @@ export async function register(
 
   const { name, email } = parsed.data;
 
-  let result: { outcome: RegisterState["outcome"]; eventTitle?: string };
+  type EventSummary = {
+    title: string;
+    slug: string;
+    startsAt: Date;
+    endsAt: Date | null;
+    timezone: string;
+  };
+  let result: { outcome: RegisterState["outcome"]; event?: EventSummary };
   try {
     result = await prisma.$transaction(async (tx) => {
-      const event = await tx.event.findFirst({
+      const found = await tx.event.findFirst({
         where: { tenantId: tenant.id, slug: eventSlug, status: "PUBLISHED" },
       });
-      if (!event) return { outcome: "closed" as const };
+      if (!found) return { outcome: "closed" as const };
+      const event = found;
 
       // Serialise concurrent registrations for this event.
       await tx.$queryRaw`SELECT id FROM "Event" WHERE id = ${event.id} FOR UPDATE`;
@@ -63,9 +76,17 @@ export async function register(
         where: { eventId: event.id, status: "CONFIRMED" },
       });
 
+      const summary: EventSummary = {
+        title: event.title,
+        slug: event.slug,
+        startsAt: event.startsAt,
+        endsAt: event.endsAt,
+        timezone: event.timezone,
+      };
+
       const isFull = event.capacity !== null && confirmed >= event.capacity;
       if (isFull && !event.waitlistEnabled) {
-        return { outcome: "full" as const, eventTitle: event.title };
+        return { outcome: "full" as const, event: summary };
       }
 
       await tx.registration.create({
@@ -80,7 +101,7 @@ export async function register(
 
       return {
         outcome: (isFull ? "waitlisted" : "confirmed") as "waitlisted" | "confirmed",
-        eventTitle: event.title,
+        event: summary,
       };
     });
   } catch (error) {
@@ -94,22 +115,32 @@ export async function register(
     throw error;
   }
 
-  if (result.outcome === "confirmed" || result.outcome === "waitlisted") {
+  if (
+    (result.outcome === "confirmed" || result.outcome === "waitlisted") &&
+    result.event
+  ) {
     const waitlisted = result.outcome === "waitlisted";
-    await sendEmail({
+    const event = result.event;
+    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
+    const proto = rootDomain.startsWith("localhost") ? "http" : "https";
+
+    const props = {
+      attendeeName: name,
+      eventTitle: event.title,
+      // Always the event's own timezone, so the email agrees with the page.
+      eventWhen: formatEventWhen(event.startsAt, event.endsAt, event.timezone),
+      organizationName: tenant.name,
+      eventUrl: `${proto}://${tenant.slug}.${rootDomain}/${event.slug}`,
+      waitlisted,
+    };
+
+    await sendTemplate({
       to: email,
       subject: waitlisted
-        ? `You're on the waitlist for ${result.eventTitle}`
-        : `You're registered for ${result.eventTitle}`,
-      text: [
-        `Hi ${name},`,
-        ``,
-        waitlisted
-          ? `${result.eventTitle} is currently full, so you're on the waitlist. We'll be in touch if a place opens up.`
-          : `You're registered for ${result.eventTitle}. We look forward to seeing you.`,
-        ``,
-        `— ${tenant.name}`,
-      ].join("\n"),
+        ? `You're on the waitlist for ${event.title}`
+        : `You're registered for ${event.title}`,
+      template: <EventRegistration {...props} />,
+      text: eventRegistrationText(props),
     });
 
     revalidatePath(`/${tenantSlug}/${eventSlug}`);

@@ -3,31 +3,11 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { resolveActiveTenant } from "@/lib/tenant";
 import { seatsRemaining } from "@/lib/events";
-import { formatInZone, zoneLabel } from "@/lib/time";
+import { formatEventWhen } from "@/lib/time";
 import { Logo } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RegisterForm } from "./register-form";
 
-/**
- * Rendered in the event's own timezone with the zone shown, so an attendee
- * abroad reads the same time the organizer scheduled.
- */
-function formatRange(startsAt: Date, endsAt: Date | null, timezone: string): string {
-  const date = formatInZone(startsAt, timezone, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  const start = formatInZone(startsAt, timezone, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const zone = zoneLabel(startsAt, timezone);
-  if (!endsAt) return `${date} · ${start} ${zone}`;
-  const end = formatInZone(endsAt, timezone, { hour: "2-digit", minute: "2-digit" });
-  return `${date} · ${start}–${end} ${zone}`;
-}
 
 export async function generateMetadata({
   params,
@@ -85,7 +65,7 @@ export default async function PublicEventPage({
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">{event.title}</h1>
             <p className="mt-3 text-sm text-muted">
-              {formatRange(event.startsAt, event.endsAt, event.timezone)}
+              {formatEventWhen(event.startsAt, event.endsAt, event.timezone)}
             </p>
 
             {event.capacity !== null ? (

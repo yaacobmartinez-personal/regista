@@ -13,8 +13,13 @@ import {
   releaseAbandonedTenant,
 } from "@/lib/tenant";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
-import { createVerificationToken, verificationExpiry } from "@/lib/tokens";
-import { sendEmail } from "@/lib/email";
+import {
+  createVerificationToken,
+  verificationExpiry,
+  VERIFICATION_TTL_HOURS,
+} from "@/lib/tokens";
+import { sendTemplate } from "@/lib/email";
+import { VerifyEmail, verifyEmailText } from "@/emails/verify-email";
 import { PENDING_EMAIL_COOKIE, type SignupState } from "./shared";
 
 const signupSchema = z.object({
@@ -47,20 +52,19 @@ async function sendVerification(opts: {
     },
   });
 
-  const link = `${appOrigin()}/verify?token=${raw}`;
-  await sendEmail({
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
+  const props = {
+    organizationName: opts.organization,
+    address: `${opts.slug}.${rootDomain}`,
+    verifyUrl: `${appOrigin()}/verify?token=${raw}`,
+    expiryHours: VERIFICATION_TTL_HOURS,
+  };
+
+  await sendTemplate({
     to: opts.email,
-    subject: `Verify your email to activate ${opts.organization}`,
-    text: [
-      `Welcome to Regista.`,
-      ``,
-      `Confirm this address to activate "${opts.organization}" at ${opts.slug}.`,
-      ``,
-      link,
-      ``,
-      `This link expires in 24 hours and can be used once.`,
-      `If you didn't create this organization, you can ignore this email.`,
-    ].join("\n"),
+    subject: `Confirm your email to activate ${opts.organization}`,
+    template: <VerifyEmail {...props} />,
+    text: verifyEmailText(props),
   });
 }
 

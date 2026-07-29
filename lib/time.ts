@@ -82,6 +82,33 @@ export function zoneLabel(date: Date, timeZone: string): string {
   return parts.find((p) => p.type === "timeZoneName")?.value ?? timeZone;
 }
 
+/**
+ * The canonical way to present an event's date and time.
+ *
+ * Shared by the public page and the confirmation email so the two can never
+ * disagree about when something happens.
+ */
+export function formatEventWhen(
+  startsAt: Date,
+  endsAt: Date | null,
+  timezone: string,
+): string {
+  const date = formatInZone(startsAt, timezone, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const start = formatInZone(startsAt, timezone, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const zone = zoneLabel(startsAt, timezone);
+  if (!endsAt) return `${date} · ${start} ${zone}`;
+  const end = formatInZone(endsAt, timezone, { hour: "2-digit", minute: "2-digit" });
+  return `${date} · ${start}–${end} ${zone}`;
+}
+
 /** The list offered in the event editor. */
 export function supportedTimeZones(): string[] {
   const withValues = Intl as typeof Intl & {

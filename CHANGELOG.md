@@ -9,8 +9,43 @@ Nothing has been publicly released yet. Entries are grouped by build milestone
 
 ## [Unreleased]
 
-Next up: **M5 — email templates** (React Email, a verified sending domain, and
-richer confirmation messages).
+Next up: **M6 — team members** (invite colleagues, accept invitations, manage
+roles).
+
+## [M5] — Designed emails — 2026-07-29
+
+Messages now look like they came from the product rather than a terminal.
+
+### Added
+
+- Branded HTML emails for confirming a new organization and for event
+  registration, matching the product's look.
+- **Registration emails now say when the event is.** They carry the date and time
+  in the event's own timezone, taken from the same helper the event page uses, so
+  the email and the page can never disagree.
+- Waitlist confirmations read differently from a confirmed place, rather than
+  both being "you're registered".
+- Every message goes out as HTML with a plain-text alternative, so clients that
+  refuse HTML still get something readable.
+- Registration emails link back to the event page and name the organizer as the
+  person to contact.
+- `EMAIL_DEBUG_HTML` prints the rendered HTML alongside the text while working on
+  templates locally.
+
+### Fixed
+
+- A confirmation email read "expires in 24hours" — the space was lost when the
+  value was substituted into the sentence.
+
+### Notes
+
+- Sending in production still needs a verified domain in Resend with DKIM, SPF,
+  and DMARC published. Until `RESEND_API_KEY` is set, nothing is sent and messages
+  are written to the server console instead. See the developer guide.
+
+## [Bug fixes] — 2026-07-29
+
+A pass over the milestones so far, before adding more.
 
 ### Fixed
 

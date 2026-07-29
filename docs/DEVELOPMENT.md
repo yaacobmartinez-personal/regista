@@ -267,6 +267,36 @@ navigate on the client instead — see [`app/app/login/actions.ts`](../app/app/l
 and the `useEffect` in its page. Page-level (non-action) redirects are fine: they reach the
 browser as a real redirect and pass back through the proxy.
 
+## 8g. Email (M5)
+
+Templates live in [`emails/`](../emails) and are React Email components.
+[`lib/email.ts`](../lib/email.ts) renders one to HTML and sends it with a plain-text
+alternative via `sendTemplate()`.
+
+- **Layout** ([`emails/layout.tsx`](../emails/layout.tsx)) is the shared shell: brand mark,
+  heading, footer, and the preview line shown in the inbox list. Everything is inline
+  styles and tables because email clients ignore stylesheets, and it is deliberately
+  light-only — dark-mode support across clients is too inconsistent to half-apply.
+- **Every template ships a matching `*Text()` function.** Keep the two in step; the text
+  version is what the console transport prints and what text-only clients receive.
+- **Event times come from `formatEventWhen`**, the same helper the public page uses, so an
+  email can never disagree with the page about when something happens.
+- **Watch JSX whitespace.** `{value} hours` can render as `24hours` once React inserts its
+  separators. Where a value sits inside a sentence, build the whole string in one template
+  literal instead.
+- `EMAIL_DEBUG_HTML=1` makes the console transport print the rendered HTML as well as the
+  text — useful while editing templates. Leave it unset otherwise, and never in production:
+  the output contains recipient personal data.
+
+**Before sending in production**, Resend needs a verified sending domain:
+
+1. Add the domain in Resend and publish the DKIM, SPF, and DMARC records it gives you.
+2. Set `EMAIL_FROM` to an address on that domain (`no-reply@yourdomain`).
+3. Set `RESEND_API_KEY`. Until it is set, nothing is sent — messages only reach the console.
+
+Sending from an unverified domain will be rejected or land in spam, so treat this as part
+of the launch checklist rather than an afterthought.
+
 ## 9. Security & privacy (build-time requirements)
 
 These are acceptance criteria, not optional. Full detail lives in the project plan; the
@@ -293,9 +323,10 @@ essentials:
   row-locked capacity enforcement, waitlists, dedupe, confirmation emails.
 - **M4 — done.** Attendee list with search/filter/paging, check-in, CSV export with
   formula-injection escaping, registrant erasure, audit logging.
+- **M5 — done.** Branded React Email templates for verification and registration, sent as
+  HTML with a plain-text alternative; console transport retained for local development.
 - **M3** — events CRUD + public registration (transactional capacity, waitlist).
 - **M4** — attendee management (search, check-in, CSV export, erasure, audit log).
-- **M5** — email (Resend + React Email; console fallback in dev).
 - **M6** — team members (invite/accept/roles).
 
 ---

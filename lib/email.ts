@@ -1,24 +1,27 @@
+import { render } from "@react-email/render";
+import type { ReactElement } from "react";
+
 /**
- * Minimal transactional-email seam.
+ * Transactional email.
  *
- * M5 swaps the transport for Resend + React Email templates; until then (and
- * whenever RESEND_API_KEY is absent) messages are logged to the server console
- * so local flows are fully testable without a provider.
+ * Messages are sent as HTML with a plain-text alternative, so clients that
+ * refuse HTML still get something readable. With no RESEND_API_KEY configured
+ * the text version is written to the server console instead, which keeps local
+ * flows testable without a provider.
  */
 
 export type EmailMessage = {
   to: string;
   subject: string;
-  /** Plain-text body. Rich templates arrive with React Email in M5. */
+  html: string;
+  /** Plain-text alternative. Also what dev logging prints. */
   text: string;
 };
 
-export async function sendEmail({ to, subject, text }: EmailMessage): Promise<void> {
+export async function sendEmail({ to, subject, html, text }: EmailMessage): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
-    // Dev fallback. Never log tokens in production paths — this branch only runs
-    // when no provider is configured.
     console.log(
       [
         "",
@@ -27,6 +30,9 @@ export async function sendEmail({ to, subject, text }: EmailMessage): Promise<vo
         `Subject: ${subject}`,
         "",
         text,
+        "",
+        `[html alternative: ${html.length} bytes]`,
+        process.env.EMAIL_DEBUG_HTML ? `\n${html}` : "",
         "───────────────────────────────────────────────────────",
         "",
       ].join("\n"),
@@ -44,12 +50,29 @@ export async function sendEmail({ to, subject, text }: EmailMessage): Promise<vo
       from: process.env.EMAIL_FROM ?? "Regista <no-reply@regista.app>",
       to,
       subject,
+      html,
       text,
     }),
   });
 
   if (!res.ok) {
-    // Surface failure to the caller without leaking recipient details upstream.
+    // Surface failure without echoing the recipient into the error.
     throw new Error(`Email send failed (${res.status})`);
   }
+}
+
+/** Render a template and send it in one step. */
+export async function sendTemplate(options: {
+  to: string;
+  subject: string;
+  template: ReactElement;
+  text: string;
+}): Promise<void> {
+  const html = await render(options.template);
+  await sendEmail({
+    to: options.to,
+    subject: options.subject,
+    html,
+    text: options.text,
+  });
 }
