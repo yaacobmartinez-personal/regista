@@ -9,8 +9,49 @@ Nothing has been publicly released yet. Entries are grouped by build milestone
 
 ## [Unreleased]
 
-Team members (M6) are built and awaiting end-to-end verification. Next after
-that: the remaining audit findings (P1–P4 in `docs/AUDIT-FINDINGS.md`).
+All six milestones are built and walked through. Remaining work is the privacy
+and maintainability findings (P3–P4 in `docs/AUDIT-FINDINGS.md`), plus the
+verified sending domain needed before any real send.
+
+## [M6] — Team members — 2026-07-29
+
+Organizations can bring colleagues in.
+
+### Added
+
+- Team page for admins: invite by email with a role, see who's a member and
+  what they can do, change roles, remove people, and revoke invitations that
+  haven't been taken up.
+- Invitation emails naming who invited you, which organization, and what the
+  role lets you do.
+- Four ways of accepting are handled: already signed in as the invited address;
+  signed in as somebody else; an existing account that needs to sign in first;
+  and a new colleague, who picks a password and is signed straight in.
+- Staff don't see the Team tab at all, rather than a page that refuses them.
+
+### Security
+
+- **An invitation belongs to an address, not to whoever opens the link.**
+  Someone forwarded the link, or signed in as another person, cannot accept it —
+  they're told it was sent elsewhere and offered a sign-out, without being shown
+  whose address it was.
+- Invitation links work once and expire after a week; the link is stored only as
+  a hash, so a copy of the database can't be used to join anything.
+- Two people redeeming the same invitation at the same moment produces one
+  membership, not two.
+- **Accepting an invitation never changes a role you already have**, so an old
+  link can't quietly demote an admin.
+- An organization can't be left with nobody able to manage it: the last admin
+  can't be removed or made staff, and the check happens in the same step as the
+  change so two admins acting at once can't slip past it.
+- Invitations, revocations, removals and role changes are all recorded.
+
+### Fixed
+
+- After joining, the invitation page said the invitation was no longer valid —
+  true, because it had just been used, but a confusing first impression. It now
+  confirms you've joined and links you into the organization. Someone else
+  opening a spent link still learns nothing.
 
 ### Security
 

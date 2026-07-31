@@ -115,8 +115,8 @@ export function EventForm({
           <span className="font-medium">Starts</span>
           <input
             name="startsAt"
-          aria-invalid={state?.fieldErrors?.startsAt ? true : undefined}
-          aria-describedby={state?.fieldErrors?.startsAt ? "event-startsat-error" : undefined}
+            aria-invalid={state?.fieldErrors?.startsAt ? true : undefined}
+            aria-describedby={state?.fieldErrors?.startsAt ? "event-startsat-error" : undefined}
             type="datetime-local"
             required
             defaultValue={event?.startsAtLocal ?? ""}
@@ -133,8 +133,8 @@ export function EventForm({
           </span>
           <input
             name="endsAt"
-          aria-invalid={state?.fieldErrors?.endsAt ? true : undefined}
-          aria-describedby={state?.fieldErrors?.endsAt ? "event-endsat-error" : undefined}
+            aria-invalid={state?.fieldErrors?.endsAt ? true : undefined}
+            aria-describedby={state?.fieldErrors?.endsAt ? "event-endsat-error" : undefined}
             type="datetime-local"
             defaultValue={event?.endsAtLocal ?? ""}
             className={field}

@@ -2,7 +2,11 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { ROLE_LABEL, ROLE_SUMMARY } from "@/lib/authz";
-import { findLiveInvitation, invitedUserHasAccount } from "@/lib/invitations";
+import {
+  findLiveInvitation,
+  invitedUserHasAccount,
+  tenantJoinedWithToken,
+} from "@/lib/invitations";
 import { Wordmark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { signOutAction } from "../actions";
@@ -33,6 +37,36 @@ export default async function InvitePage({
 }) {
   const { token } = await searchParams;
   const invitation = await findLiveInvitation(token);
+  const session = await auth();
+
+  // Accepting re-renders this page, and by then the token is spent. Check
+  // whether it was *this* visitor who spent it before calling the link dead.
+  if (!invitation) {
+    const joined = await tenantJoinedWithToken(token, session?.user?.id);
+    if (joined) {
+      return (
+        <Shell>
+          <p className="font-mono text-xs uppercase tracking-widest text-faint">
+            Invitation accepted
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+            You&apos;ve joined {joined.name}
+          </h1>
+          <p className="mt-2 text-sm text-muted">
+            You now have access to this organization.
+          </p>
+          <div className="mt-8">
+            <Link
+              href={`/o/${joined.slug}`}
+              className="inline-flex rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            >
+              Go to {joined.name}
+            </Link>
+          </div>
+        </Shell>
+      );
+    }
+  }
 
   if (!invitation || !token) {
     return (
@@ -56,7 +90,6 @@ export default async function InvitePage({
     );
   }
 
-  const session = await auth();
   const signedInUser = session?.user?.id
     ? await prisma.user.findUnique({
         where: { id: session.user.id },

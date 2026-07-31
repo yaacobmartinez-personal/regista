@@ -44,6 +44,34 @@ export async function findLiveInvitation(
   };
 }
 
+/**
+ * The tenant an already-redeemed token belonged to, if the signed-in user is
+ * now a member of it.
+ *
+ * Accepting re-renders this page, by which point the token is spent — so
+ * without this the person who just joined is told the invitation is invalid.
+ * Returning the tenant lets the page say what actually happened. Gated on
+ * membership so a spent token tells a stranger nothing.
+ */
+export async function tenantJoinedWithToken(
+  rawToken: string | undefined,
+  userId: string | undefined,
+): Promise<{ name: string; slug: string } | null> {
+  if (!rawToken || !userId) return null;
+
+  const invitation = await prisma.invitation.findUnique({
+    where: { token: hashToken(rawToken) },
+    select: { tenantId: true, acceptedAt: true },
+  });
+  if (!invitation?.acceptedAt) return null;
+
+  const membership = await prisma.membership.findFirst({
+    where: { userId, tenantId: invitation.tenantId },
+    select: { tenant: { select: { name: true, slug: true } } },
+  });
+  return membership?.tenant ?? null;
+}
+
 /** Create the membership and close the invitation, atomically. */
 export async function redeemInvitation(
   invitation: LiveInvitation,

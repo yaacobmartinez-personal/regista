@@ -14,7 +14,7 @@ manage attendees and invite teammates; registrants get email confirmations.
 - **Postgres** + **Prisma 6** (ORM)
 - **Auth.js / NextAuth v5** — credentials auth, argon2 password hashing
 - **Tailwind CSS 4**, TypeScript
-- **Resend** + React Email (wired in a later milestone)
+- **Resend** + React Email for transactional mail
 
 ## Prerequisites
 
@@ -101,7 +101,13 @@ app/
     o/[slug]/    Tenant-scoped dashboard
   [domain]/      Tenant public pages          -> <tenant>.<root>
   api/auth/      NextAuth route handler
-lib/             db, auth, tenant, authz
+    o/[slug]/    Tenant-scoped dashboard (events, attendees, team)
+    invite/      Accept a team invitation
+    verify/      Confirm a new organization's email
+lib/             db, auth, authz, tenant, events, time, tokens,
+                 invitations, email, rate-limit, csv, audit
+emails/          React Email templates
+components/      Shared UI (brand, header, nav, theme toggle)
 prisma/          schema.prisma, migrations, seed.mjs
 proxy.ts         Subdomain routing (Next 16 "proxy" convention)
 docs/            Requirements, dev guide, product overview
@@ -109,7 +115,12 @@ docs/            Requirements, dev guide, product overview
 
 ## Status
 
-**M2 complete** — subdomain routing, credentials auth, DB-checked tenant isolation, and
-self-serve email-verified signup are working. Events and public registration (M3) are next.
-See the [developer guide](docs/DEVELOPMENT.md) for architecture and the
-[changelog](CHANGELOG.md) for what has shipped.
+**All six milestones built** — subdomain routing and tenant isolation, email-verified
+signup, events and public registration, attendee management, designed emails, and team
+members.
+
+Four independent audits were then run over the codebase. The findings and what has been
+fixed are tracked in [docs/AUDIT-FINDINGS.md](docs/AUDIT-FINDINGS.md): the security,
+correctness and accessibility batches are done; privacy and maintainability work remains.
+This is **not production-ready yet** — see the outstanding items there, and the sending-domain
+setup in the [developer guide](docs/DEVELOPMENT.md).

@@ -32,6 +32,12 @@ P2 verification:
 - Timestamps render with an explicit zone ("28 Jul, 14:49 UTC").
 - No console errors on a fresh page load.
 
+M6 walkthrough (run separately, 2026-07-29): invite → email → wrong-account
+refusal → accept as a new colleague → accept as an existing account → role
+applied → last-admin guard relaxing once a second admin exists → spent token
+telling a stranger nothing. Found and fixed one bug: the page told someone who
+had just joined that their invitation was invalid.
+
 Also fixed while here: the theme script was emitting a React warning on every
 page. An earlier attempt to fix this by moving it into `<head>` did not work —
 it needed `next/script` with `beforeInteractive`. Now verified clean in a fresh

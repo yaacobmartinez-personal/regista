@@ -82,7 +82,17 @@ member or changing a role takes effect immediately — no waiting for token expi
   token — those are always resolved from the DB (see §3).
 - **Cookie scoping:** the session cookie is **host-only** (no `domain` attribute set), so it
   is scoped to `app.<root>` where login happens and is never sent to tenant public
-  subdomains. Cookies are `HttpOnly` + `SameSite=Lax` + `Secure` (in production).
+  subdomains. Cookies are `HttpOnly` + `SameSite=Lax` by Auth.js default — we don't set
+  them ourselves. `Secure` follows the request protocol rather than the environment, so it
+  only holds if every request reaching Auth.js is HTTPS; set `useSecureCookies` or `AUTH_URL`
+  explicitly before production.
+- **An address nobody has confirmed is not an account.** `authorize` refuses sign-in while
+  `emailVerified` is null, and signup and invitation acceptance will both claim such a
+  record — overwriting its password. That is deliberate: without it, registering someone
+  else's address gave you a working login for it and locked them out permanently, since
+  there is no password-reset flow. A *confirmed* account's password is never overwritten.
+- **`requireMembership` also requires the tenant to be `ACTIVE`**, so an unconfirmed
+  organization cannot be used while it still counts as an abandoned signup.
 - `trustHost: true` so local subdomains / proxies are trusted.
 - Login uses a Server Action ([`app/app/login/actions.ts`](../app/app/login/actions.ts))
   that calls `signIn("credentials", ...)`; invalid credentials return a generic message (no
@@ -102,7 +112,7 @@ directly via Prisma.
 | `Membership` | Links a `User` to a `Tenant` with a `Role` (`ADMIN` \| `STAFF`) |
 | `Invitation` | Teammate invites — single-use, expiring, email-bound tokens |
 | `Event` | `DRAFT`/`PUBLISHED`/`CLOSED`, optional `capacity` + `waitlistEnabled` |
-| `Registration` | Public sign-up; `anonymizedAt` supports true erasure |
+| `Registration` | Public sign-up; `anonymizedAt` marks in-system anonymisation (see §8d) |
 | `AuditLog` | Records PII access (exports, deletions) for accountability |
 | `VerificationToken` | Owner email verification at signup |
 
@@ -121,11 +131,20 @@ Copy `.env.example` to `.env`. Keys:
 | `DATABASE_URL` | Postgres connection (points at the Docker container in dev) |
 | `AUTH_SECRET` | NextAuth signing secret (`openssl rand -base64 32`) |
 | `NEXT_PUBLIC_ROOT_DOMAIN` | Root domain for subdomain resolution (`localhost:3000` in dev) |
-| `RESEND_API_KEY` | Email provider key — leave blank in dev to log emails to console |
+| `RESEND_API_KEY` | Email provider key. Blank logs to the console in development; **in production a blank key throws** rather than silently logging every message |
 | `EMAIL_FROM` | Default From address for outbound email |
+| `TRUSTED_PROXY_COUNT` | Number of reverse proxies in front of the app; rate limiting reads the client address that many entries from the right of `X-Forwarded-For`. `0` (default) ignores the header entirely, which is the safe choice when directly exposed |
+| `EMAIL_DEBUG_HTML` | Dev only: also print the rendered HTML to the console |
+| `EMAIL_DEBUG_TOKENS` | Dev only: print verification/invite links with their token intact so you can follow them locally. Tokens are redacted without it |
 
-Secrets live only in `.env` (gitignored). Never log tokens or registrant PII, and never put
-either in a URL query string.
+Secrets live only in `.env` (gitignored). Never log tokens or registrant PII: the console
+email transport redacts tokens and refuses to run in production at all.
+
+> **Known deviation.** Verification and invitation links carry their token as a query
+> parameter (`/verify?token=…`, `/invite?token=…`), and the attendee search puts the search
+> term — often a name or email — in the URL. Query strings persist in history, `Referer`,
+> and proxy logs. This is tracked as P3 in [AUDIT-FINDINGS.md](AUDIT-FINDINGS.md) and is not
+> yet fixed; treat the rule above as the intent, not the current state.
 
 ---
 
@@ -183,7 +202,7 @@ redemption sets the tenant `ACTIVE` and marks the token used → user signs in.
   as a SHA-256 hash, single-use (`usedAt`), 24-hour expiry.
 - **Email** ([`lib/email.ts`](../lib/email.ts)): one `sendEmail()` seam. With no
   `RESEND_API_KEY` it prints to the server console — copy the link from there in dev.
-  M5 swaps the transport for React Email templates.
+  Templates are React Email components (see §8g).
 - **Rate limiting** ([`lib/rate-limit.ts`](../lib/rate-limit.ts)): in-process fixed window
   (signup 5/hr/IP, resend 3/15min/IP). No new infrastructure, but counters are per-instance
   and reset on restart — swap for Redis behind the same `rateLimit()` signature before
@@ -194,8 +213,11 @@ redemption sets the tenant `ACTIVE` and marks the token used → user signs in.
 - **No account enumeration:** signing up with an existing email never overwrites that
   account's password and returns the same response as a fresh signup.
 - A **PENDING** tenant's public pages 404 (`resolveActiveTenant` requires `ACTIVE`).
-- *Known gap:* a PENDING tenant holds its slug until manually cleaned up — reclaiming slugs
-  from expired, unverified signups is deferred.
+- An address held by a signup that was never confirmed is released once the confirmation
+  window closes — but only if nothing was created under it. `slugAvailability` reports such
+  an address as available, and `releaseAbandonedTenant` re-checks both conditions inside the
+  delete, so a tenant that gained data or got verified in the meantime is left alone and a
+  concurrent claim is a no-op rather than an error.
 
 ## 8c. Registration capacity (M3)
 
@@ -219,7 +241,26 @@ This is verified, not assumed: a concurrency test fired 20 simultaneous attempts
 that only passes the "with lock" case can pass vacuously.
 
 Duplicates rely on the `(eventId, email)` unique index; the action catches Prisma's `P2002`
-and reports it as "already signed up" rather than failing.
+and reports it as "already signed up" rather than failing. `P2028`/`P2034` (transaction
+timeout or write conflict) are caught too and reported as "try again in a moment" — the lock
+serialises sign-ups by design, so a rush at the moment registration opens is contention
+rather than a fault.
+
+**Capacity and the waitlist:**
+
+- Capacity cannot be set below the number of people already confirmed. Allowing it left the
+  public page reading "Full" while the dashboard showed more registered than the limit.
+- Raising capacity, or removing the limit, **promotes the longest-waiting people**
+  (`promoteFromWaitlist`, under the same row lock). Without that the queue was decorative:
+  everyone already waiting stayed put while later arrivals were confirmed ahead of them.
+- Nothing writes `CANCELLED`. Registrant self-cancellation is out of scope for v1, so the
+  status filter deliberately doesn't offer it.
+
+**Times that don't exist.** On the morning clocks go forward an hour never happens, so
+`eventInputSchema` rejects a wall-clock time that isn't real in the chosen zone
+(`wallClockExists`). Converting anyway shifted the event — an hour *earlier* than typed in
+the Americas, a day earlier in Santiago. Ambiguous autumn times are accepted: they exist,
+just twice.
 
 ## 8d. Attendees, export and erasure (M4)
 
@@ -297,6 +338,53 @@ alternative via `sendTemplate()`.
 Sending from an unverified domain will be rejected or land in spam, so treat this as part
 of the launch checklist rather than an afterthought.
 
+## 8h. Team members and invitations (M6)
+
+Team management lives at `/o/<org>/team` and is **ADMIN-only** — staff get the same
+`notFound()` as a non-member, and the Team tab isn't rendered for them at all.
+
+- **Invitations** ([`lib/invitations.ts`](../lib/invitations.ts)) are email-bound: holding
+  the link is not enough, the accepting account must be that address. Tokens follow the same
+  rules as verification (256-bit, SHA-256 at rest, expiring — 7 days here).
+- **Redemption claims the invitation first**, with a conditional `updateMany` inside the
+  transaction, so a concurrent second redemption is a no-op rather than a duplicate
+  membership.
+- **Accepting never changes an existing role** (`update: {}`). An outstanding invitation is
+  a stale snapshot; letting it rewrite the role would allow an old STAFF link to demote a
+  sitting admin, bypassing the last-admin guard below.
+- **Re-inviting replaces the outstanding invitation in one transaction**, so two admins
+  inviting the same person can't leave a second token that still works after the visible one
+  is revoked.
+- **The last admin cannot be removed or demoted.** `withLastAdminGuard` does the count and
+  the write in one transaction behind `SELECT … FOR UPDATE` on the tenant's admin
+  memberships. Counting outside the transaction was a race that could leave an organization
+  with no admin and no way back in, since the team page itself requires one.
+- Four acceptance states are handled: signed in as the invited address; signed in as someone
+  else (offers sign-out rather than silently attaching to the wrong account); an existing
+  confirmed account (sign in first); and a new colleague, who sets a password and is signed
+  in — following a link sent to that inbox proves control of the address.
+- **Accepting re-renders this page, by which point the token is spent.**
+  `tenantJoinedWithToken` catches that: if the visitor is now a member of the tenant the
+  token belonged to, the page confirms they've joined instead of calling the link dead. It
+  is gated on membership, so a spent token still tells a stranger nothing.
+
+## 8i. Theme and colour
+
+The palette lives in `app/globals.css`: values in `@theme` for light, overridden under
+`:root[data-theme="dark"]`. See §8 for the Tailwind v4 gotcha about `@theme inline`.
+
+- **Never use Tailwind's `dark:` variant.** It compiles to `prefers-color-scheme`, which is
+  the *operating system's* preference — and this app deliberately ignores that in favour of
+  its own `data-theme` toggle. The two never meet, so a `dark:` utility renders its dark
+  value on a light background and vice versa. This was live for a while and made every form
+  error nearly unreadable. Use a token (`text-danger`, `text-muted`, …) instead; there are
+  currently zero `dark:` utilities in `app/` or `components/` and it should stay that way.
+- **Foreground tokens are picked by measurement, not by eye.** Every one clears WCAG AA
+  (4.5:1) against `surface`, `panel` and `canvas` in both themes. If you change one, check it
+  — several of the originals failed, including white-on-accent in dark mode at 3.22:1.
+- The theme is applied pre-paint by a `next/script` with `strategy="beforeInteractive"` in
+  the root layout. A plain `<script>` element works but makes React warn on every page.
+
 ## 9. Security & privacy (build-time requirements)
 
 These are acceptance criteria, not optional. Full detail lives in the project plan; the
@@ -304,8 +392,13 @@ essentials:
 
 - **Isolation:** server-derived tenant, `where: { id, tenantId }` everywhere, DB-checked
   `requireMembership` (§3).
-- **Public surface:** rate-limit register/signup/login; enforce event capacity inside a
-  **transaction** (no last-seat race); size-cap `customFields`.
+- **Public surface:** rate-limit register/signup/login/resend and invitations; enforce event
+  capacity inside a **transaction**, reading the limit through the row lock (no last-seat
+  race). Rate limits key off `clientIp()`, which only trusts `X-Forwarded-For` as far as
+  `TRUSTED_PROXY_COUNT` says there are proxies — the header is client-writable, so trusting
+  it blindly lets a caller mint a fresh bucket per request.
+  *Not yet done:* `customFields` is declared on the model but never written and has no size
+  cap; the cap must exist before anything populates it (P4).
 - **Signup:** reserved-slug blocklist (in [`lib/tenant.ts`](../lib/tenant.ts)) +
   email-verified tenant activation.
 - **Erasure:** organizer delete anonymizes registrant PII (`anonymizedAt`) while keeping
@@ -325,9 +418,14 @@ essentials:
   formula-injection escaping, registrant erasure, audit logging.
 - **M5 — done.** Branded React Email templates for verification and registration, sent as
   HTML with a plain-text alternative; console transport retained for local development.
-- **M3** — events CRUD + public registration (transactional capacity, waitlist).
-- **M4** — attendee management (search, check-in, CSV export, erasure, audit log).
-- **M6** — team members (invite/accept/roles).
+- **M6 — done.** Team members: invite by email with a role, accept (existing account or a
+  new one), change roles, remove members, revoke invitations.
+
+All six milestones are built. Four independent audits were then run over the codebase;
+their findings and current remediation status live in
+[AUDIT-FINDINGS.md](AUDIT-FINDINGS.md). P0–P2 are fixed; P3 (privacy) and P4
+(maintainability) are outstanding, and several statements in this guide are marked below
+where the code does not yet match the intent.
 
 ---
 
