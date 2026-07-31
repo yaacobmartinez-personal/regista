@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireMembership } from "@/lib/authz";
+import { recordAudit } from "@/lib/audit";
 import { eventInputSchema, uniqueEventSlug } from "@/lib/events";
 import type { EventFormState } from "./shared";
 
@@ -137,10 +138,26 @@ export async function deleteEvent(formData: FormData): Promise<void> {
   const eventId = String(formData.get("eventId") ?? "");
   const ctx = await requireMembership(tenantSlug, "ADMIN");
 
-  const deleted = await prisma.event.deleteMany({
+  const event = await prisma.event.findFirst({
     where: { id: eventId, tenantId: ctx.tenant.id },
+    select: { id: true, _count: { select: { registrations: true } } },
   });
-  if (deleted.count === 0) notFound();
+  if (!event) notFound();
+
+  // Deleting cascades to every registration, so record it before the rows are
+  // gone — including how many people's details went with it. Written first so a
+  // failure to log is a failure to delete, not a silent untracked deletion.
+  await recordAudit({
+    tenantId: ctx.tenant.id,
+    actorUserId: ctx.userId,
+    action: "DELETE_EVENT",
+    targetType: "Event",
+    targetId: `${event.id} (${event._count.registrations} registrations)`,
+  });
+
+  await prisma.event.deleteMany({
+    where: { id: event.id, tenantId: ctx.tenant.id },
+  });
 
   revalidatePath(`/o/${ctx.tenant.slug}`);
   redirect(`/o/${ctx.tenant.slug}`);

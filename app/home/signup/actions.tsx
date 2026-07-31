@@ -14,7 +14,7 @@ import {
 } from "@/lib/tenant";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import {
-  createVerificationToken,
+  createSecureToken,
   verificationExpiry,
   VERIFICATION_TTL_HOURS,
 } from "@/lib/tokens";
@@ -41,7 +41,7 @@ async function sendVerification(opts: {
   slug: string;
   tenantId: string;
 }) {
-  const { raw, hash: tokenHash } = createVerificationToken();
+  const { raw, hash: tokenHash } = createSecureToken();
 
   await prisma.verificationToken.create({
     data: {
@@ -127,18 +127,30 @@ export async function signup(
     return { fieldErrors: { slug: "That address is already taken." } };
   }
   if (availability.state === "abandoned") {
-    await releaseAbandonedTenant(availability.tenantId);
+    // Someone else may have claimed it in the meantime, or it may have gained
+    // data since the check — either way the release declines and the address
+    // stays taken rather than erroring.
+    const released = await releaseAbandonedTenant(availability.tenantId);
+    if (!released) {
+      return { fieldErrors: { slug: "That address is already taken." } };
+    }
   }
 
-  // An existing account keeps its password: signing up with someone else's
-  // address must never overwrite their credentials, and the response below is
-  // identical either way so the form cannot be used to probe for accounts.
+  // A confirmed account keeps its password: signing up with someone else's
+  // address must never overwrite their credentials. An unverified account is
+  // treated as unclaimed — nobody has proven control of that address, so the
+  // password on it has no owner and whoever confirms the address next takes it.
+  // That is what stops a stranger registering your address and locking you out.
+  //
+  // The response is identical in all three cases, so the form cannot be used to
+  // probe for accounts. The hash is computed unconditionally to keep the timing
+  // uniform too.
   const existingUser = await prisma.user.findUnique({
     where: { email },
-    select: { id: true },
+    select: { id: true, emailVerified: true },
   });
-
-  const passwordHash = existingUser ? null : await hash(password);
+  const passwordHash = await hash(password);
+  const claimable = existingUser !== null && existingUser.emailVerified === null;
 
   let tenant;
   try {
@@ -147,12 +159,15 @@ export async function signup(
         data: { slug, name: organization, status: "PENDING" },
       });
 
-      const user = existingUser
-        ? existingUser
-        : await tx.user.create({
-            data: { email, passwordHash: passwordHash! },
-            select: { id: true },
-          });
+      const user = !existingUser
+        ? await tx.user.create({ data: { email, passwordHash }, select: { id: true } })
+        : claimable
+          ? await tx.user.update({
+              where: { id: existingUser.id },
+              data: { passwordHash },
+              select: { id: true },
+            })
+          : existingUser;
 
       await tx.membership.create({
         data: { userId: user.id, tenantId: createdTenant.id, role: "ADMIN" },

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { myMemberships } from "@/lib/authz";
+import { myMemberships, ROLE_LABEL } from "@/lib/authz";
 import { DashboardHeader } from "@/components/dashboard-header";
 
 /**
@@ -40,31 +40,60 @@ export default async function OrgPicker() {
           </div>
         ) : (
           <ul className="mt-8 flex flex-col gap-2.5">
-            {memberships.map((m) => (
-              <li key={m.id}>
-                <Link
-                  href={`/o/${m.tenant.slug}`}
-                  className="flex items-center justify-between rounded-xl border border-line bg-surface px-4 py-3.5 transition-colors hover:border-line-strong"
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="grid h-9 w-9 place-items-center rounded-lg bg-panel text-sm font-semibold text-muted">
-                      {m.tenant.name.charAt(0).toUpperCase()}
+            {memberships.map((m) => {
+              const pending = m.tenant.status !== "ACTIVE";
+              const identity = (
+                <span className="flex items-center gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-lg bg-panel text-sm font-semibold text-muted">
+                    {m.tenant.name.charAt(0).toUpperCase()}
+                  </span>
+                  <span>
+                    <span className="block text-sm font-medium">
+                      {m.tenant.name}
                     </span>
-                    <span>
-                      <span className="block text-sm font-medium">
-                        {m.tenant.name}
-                      </span>
-                      <span className="block font-mono text-xs text-faint">
-                        {m.tenant.slug}
-                      </span>
+                    <span className="block font-mono text-xs text-faint">
+                      {m.tenant.slug}
                     </span>
                   </span>
-                  <span className="rounded-full bg-panel px-2.5 py-1 font-mono text-xs uppercase text-muted">
-                    {m.role}
-                  </span>
-                </Link>
-              </li>
-            ))}
+                </span>
+              );
+
+              // An unconfirmed organization isn't usable yet, so it is shown
+              // with the reason rather than as a link that would 404.
+              if (pending) {
+                return (
+                  <li
+                    key={m.id}
+                    className="rounded-xl border border-dashed border-line-strong bg-surface px-4 py-3.5"
+                  >
+                    <span className="flex items-center justify-between">
+                      {identity}
+                      <span className="rounded-full bg-panel px-2.5 py-1 font-mono text-xs uppercase text-muted">
+                        Unconfirmed
+                      </span>
+                    </span>
+                    <span className="mt-2 block text-xs text-muted">
+                      Check your email for the confirmation link — this
+                      organization goes live once the address is confirmed.
+                    </span>
+                  </li>
+                );
+              }
+
+              return (
+                <li key={m.id}>
+                  <Link
+                    href={`/o/${m.tenant.slug}`}
+                    className="flex items-center justify-between rounded-xl border border-line bg-surface px-4 py-3.5 transition-colors hover:border-line-strong"
+                  >
+                    {identity}
+                    <span className="rounded-full bg-panel px-2.5 py-1 font-mono text-xs uppercase text-muted">
+                      {ROLE_LABEL[m.role]}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </main>

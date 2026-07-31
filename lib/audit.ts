@@ -10,13 +10,21 @@ import { prisma } from "@/lib/db";
 export type AuditAction =
   | "EXPORT_ATTENDEES"
   | "ERASE_REGISTRATION"
-  | "CHECK_IN_REGISTRATION";
+  | "CHECK_IN_REGISTRATION"
+  | "INVITE_MEMBER"
+  | "REVOKE_INVITATION"
+  | "REMOVE_MEMBER"
+  | "CHANGE_ROLE"
+  // Deleting an event cascades to every registration under it, so it destroys
+  // more personal data than any other action in the product.
+  | "DELETE_EVENT";
 
 export async function recordAudit(entry: {
   tenantId: string;
   actorUserId: string;
   action: AuditAction;
   targetType?: string;
+  /** Identifier only — never the personal data itself. */
   targetId?: string;
 }): Promise<void> {
   await prisma.auditLog.create({

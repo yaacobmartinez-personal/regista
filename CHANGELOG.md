@@ -9,8 +9,50 @@ Nothing has been publicly released yet. Entries are grouped by build milestone
 
 ## [Unreleased]
 
-Next up: **M6 — team members** (invite colleagues, accept invitations, manage
-roles).
+Team members (M6) are built and awaiting end-to-end verification. Next after
+that: the remaining audit findings (P1–P4 in `docs/AUDIT-FINDINGS.md`).
+
+### Security
+
+Four independent audits were run over the codebase; the findings are recorded in
+`docs/AUDIT-FINDINGS.md`. These are the ones fixed so far — everything a
+deployment would have been unsafe without.
+
+- **Registering someone else's email address no longer locks them out of
+  Regista.** An address nobody has confirmed is now treated as unclaimed: it
+  cannot be signed into, and the person who does confirm it takes ownership. It
+  was previously possible to register a colleague's address, keep a working
+  login for it, and leave them permanently unable to accept an invitation, with
+  no way to recover.
+- **An organization that hasn't confirmed its address can no longer be used.**
+  It could previously run real events while still counting as an abandoned
+  signup — whose address, and all its events and attendees, another signup would
+  silently delete. Releasing an address now refuses outright if anything has been
+  created under it.
+- **Sign-in is rate limited**, per account and per source. It previously wasn't,
+  despite the documentation saying otherwise.
+- **Rate limits can no longer be bypassed** by forging a forwarding header. The
+  number of proxies in front of the app is now configuration
+  (`TRUSTED_PROXY_COUNT`), and the header is ignored entirely by default.
+- **A missing email API key now fails loudly instead of writing every message to
+  the log.** Verification and invitation links are bearer credentials; in
+  production a missing key raises an error, and tokens are redacted from
+  development output unless explicitly opted in.
+- **Two admins acting at the same moment can no longer leave an organization
+  with none.** The check and the change now happen together, so an organization
+  can't be locked out of its own settings with no way back.
+- **Deleting an event is recorded**, including how many registrations went with
+  it. It cascades to every attendee record and was previously untraceable.
+- **`home` and other first-party names are reserved.** `home` was claimable,
+  which would have served the marketing site and signup form from what looked
+  like a customer's own address.
+- Invitations are rate limited per organization and per admin, and names are
+  stripped of anything that could break out of an email header.
+
+### Changed
+
+- The organization chooser now shows an unconfirmed organization with the reason,
+  instead of a link that leads nowhere.
 
 ## [M5] — Designed emails — 2026-07-29
 

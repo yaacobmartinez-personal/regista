@@ -5,6 +5,14 @@ import { prisma } from "@/lib/db";
 
 const ROLE_RANK: Record<Role, number> = { STAFF: 1, ADMIN: 2 };
 
+/** How roles are described to people, in the dashboard and in invitations. */
+export const ROLE_LABEL: Record<Role, string> = { ADMIN: "Admin", STAFF: "Staff" };
+
+export const ROLE_SUMMARY: Record<Role, string> = {
+  ADMIN: "Can manage events, attendees, and the team.",
+  STAFF: "Can manage events and attendees, but not the team.",
+};
+
 export function roleAtLeast(role: Role, min: Role): boolean {
   return ROLE_RANK[role] >= ROLE_RANK[min];
 }
@@ -37,6 +45,10 @@ export async function requireMembership(
   });
 
   if (!membership) notFound();
+  // An organization that hasn't confirmed its address isn't usable yet. Without
+  // this it could accumulate real events and registrations while still counting
+  // as an abandoned signup, whose address anyone else may claim.
+  if (membership.tenant.status !== "ACTIVE") notFound();
   if (minRole && !roleAtLeast(membership.role, minRole)) notFound();
 
   return {

@@ -1,14 +1,28 @@
 import { prisma } from "@/lib/db";
 import { VERIFICATION_TTL_HOURS } from "@/lib/tokens";
 
-const RESERVED_SUBDOMAINS = new Set([
+/**
+ * Names that must never resolve to a tenant.
+ *
+ * The first group is load-bearing: these are the top-level route folders, so a
+ * tenant with one of these slugs would have its subdomain rewritten into a
+ * first-party surface. Claiming `home`, for instance, would serve the marketing
+ * site and signup form from what looks like a customer's address, while that
+ * tenant's own pages became unreachable. Keep in step with the folders in app/.
+ */
+const ROUTE_GROUP_NAMES = ["home", "app", "api"] as const;
+
+/** The rest are reserved by convention: impersonation risk or future use. */
+const CONVENTIONALLY_RESERVED = [
   "www",
-  "app",
-  "api",
   "admin",
   "mail",
+  "smtp",
+  "imap",
   "support",
   "login",
+  "signup",
+  "auth",
   "static",
   "assets",
   "cdn",
@@ -16,6 +30,14 @@ const RESERVED_SUBDOMAINS = new Set([
   "status",
   "billing",
   "dashboard",
+  "account",
+  "security",
+  "internal",
+] as const;
+
+const RESERVED_SUBDOMAINS = new Set<string>([
+  ...ROUTE_GROUP_NAMES,
+  ...CONVENTIONALLY_RESERVED,
 ]);
 
 /** True if a slug is syntactically valid AND not reserved. */
@@ -58,25 +80,59 @@ export async function slugAvailability(
 ): Promise<{ state: "free" } | { state: "taken" } | { state: "abandoned"; tenantId: string }> {
   const tenant = await prisma.tenant.findUnique({
     where: { slug },
-    select: { id: true, status: true, createdAt: true },
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+      _count: { select: { events: true, registrations: true, auditLogs: true } },
+    },
   });
   if (!tenant) return { state: "free" };
 
   const windowClosed =
     tenant.createdAt.getTime() + VERIFICATION_TTL_HOURS * 60 * 60 * 1000 <= Date.now();
 
-  if (tenant.status === "PENDING" && windowClosed) {
+  // Releasing an address destroys everything under it, so only a signup that
+  // never confirmed AND never did anything is treated as abandoned. Anything
+  // holding real data stays taken, whatever its status says.
+  const holdsData =
+    tenant._count.events > 0 ||
+    tenant._count.registrations > 0 ||
+    tenant._count.auditLogs > 0;
+
+  if (tenant.status === "PENDING" && windowClosed && !holdsData) {
     return { state: "abandoned", tenantId: tenant.id };
   }
   return { state: "taken" };
 }
 
-/** Release an abandoned signup so its address can be reused. */
-export async function releaseAbandonedTenant(tenantId: string): Promise<void> {
-  // Verification tokens carry tenantId without a foreign key, so they are
-  // removed explicitly; memberships cascade with the tenant.
-  await prisma.verificationToken.deleteMany({ where: { tenantId } });
-  await prisma.tenant.delete({ where: { id: tenantId } });
+/**
+ * Release an abandoned signup so its address can be reused.
+ *
+ * Re-checks the abandoned conditions inside the delete so a tenant that gained
+ * data (or was verified) between the check and here is left alone, and so a
+ * concurrent claim of the same address is a no-op rather than an error.
+ */
+export async function releaseAbandonedTenant(tenantId: string): Promise<boolean> {
+  return prisma.$transaction(async (tx) => {
+    const tenant = await tx.tenant.findFirst({
+      where: {
+        id: tenantId,
+        status: "PENDING",
+        events: { none: {} },
+        registrations: { none: {} },
+        auditLogs: { none: {} },
+      },
+      select: { id: true },
+    });
+    if (!tenant) return false;
+
+    // Verification tokens carry tenantId without a foreign key, so they are
+    // removed explicitly; memberships cascade with the tenant.
+    await tx.verificationToken.deleteMany({ where: { tenantId } });
+    const deleted = await tx.tenant.deleteMany({ where: { id: tenantId } });
+    return deleted.count > 0;
+  });
 }
 
 /** Look up an ACTIVE tenant by slug. Returns null if missing or not active. */

@@ -35,6 +35,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const ok = await verify(user.passwordHash, parsed.data.password);
         if (!ok) return null;
 
+        // An address nobody has confirmed is not yet owned by anyone, so it
+        // cannot be signed into. Without this, registering someone else's
+        // address would hand you a working login for it — and lock them out,
+        // since an unverified account can be claimed but not signed into.
+        // Checked after the password verify so the response time doesn't
+        // distinguish verified from unverified accounts.
+        if (!user.emailVerified) return null;
+
         // Return identity only — authorization (memberships/roles) is resolved
         // from the DB per request in lib/authz.ts, never trusted from the token.
         return { id: user.id, email: user.email, name: user.name };

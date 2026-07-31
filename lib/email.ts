@@ -18,10 +18,33 @@ export type EmailMessage = {
   text: string;
 };
 
+/**
+ * Replace the secret in any link with a placeholder.
+ *
+ * Verification and invitation links carry a single-use bearer token. Printing
+ * one to a log turns log-read access into account access, and it stays
+ * replayable — which would defeat storing only hashes.
+ */
+function redactTokens(value: string): string {
+  return value.replace(/([?&]token=)[^\s&"']+/gi, "$1[redacted]");
+}
+
+/** First tokenised link in a message, for the dev-only opt-in below. */
+function extractLink(text: string): string | null {
+  return text.match(/https?:\/\/\S*[?&]token=\S+/i)?.[0] ?? null;
+}
+
 export async function sendEmail({ to, subject, html, text }: EmailMessage): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
+  const isProduction = process.env.NODE_ENV === "production";
 
   if (!apiKey) {
+    // Never fall back to logging in production: a rotated or mistyped key would
+    // silently turn every message into a log entry instead of failing loudly.
+    if (isProduction) {
+      throw new Error("RESEND_API_KEY is not configured; refusing to send email.");
+    }
+
     console.log(
       [
         "",
@@ -29,10 +52,13 @@ export async function sendEmail({ to, subject, html, text }: EmailMessage): Prom
         `To:      ${to}`,
         `Subject: ${subject}`,
         "",
-        text,
+        redactTokens(text),
         "",
         `[html alternative: ${html.length} bytes]`,
-        process.env.EMAIL_DEBUG_HTML ? `\n${html}` : "",
+        // Printing the token is what makes a link usable from the console
+        // during local work, so it is opt-in and dev-only.
+        process.env.EMAIL_DEBUG_TOKENS ? `\nLink: ${extractLink(text) ?? "(none)"}` : "",
+        process.env.EMAIL_DEBUG_HTML ? `\n${redactTokens(html)}` : "",
         "───────────────────────────────────────────────────────",
         "",
       ].join("\n"),

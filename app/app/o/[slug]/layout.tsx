@@ -29,9 +29,16 @@ export default async function OrgLayout({
           >
             Events
           </Link>
-          <span className="cursor-not-allowed py-3 text-sm text-faint" title="Coming in M6">
-            Team
-          </span>
+          {/* Team management is admin-only, so staff aren't shown a door they
+              can't open. */}
+          {ctx.role === "ADMIN" ? (
+            <Link
+              href={`/o/${ctx.tenant.slug}/team`}
+              className="border-b-2 border-transparent py-3 text-sm text-muted transition-colors hover:text-fg"
+            >
+              Team
+            </Link>
+          ) : null}
         </div>
       </nav>
 
