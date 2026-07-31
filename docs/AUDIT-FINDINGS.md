@@ -6,7 +6,19 @@ one finding disproved and dropped (see the end).
 
 Ordered by what would hurt most in production.
 
-**Status: P0 (1–9) fixed and verified at runtime. P1–P4 outstanding.**
+**Status: P0 (1–9) and P1 (10–17) fixed and verified at runtime. P2–P4
+outstanding.**
+
+P1 verification:
+
+- DST gaps: 6/6 cases — the three that were silently shifting are refused, the
+  ambiguous autumn overlap is still accepted, ordinary times unaffected. Refusal
+  confirmed through the event form, which reports it and doesn't create the event.
+- Waitlist promotion: capacity 2→4 promoted exactly the two longest-waiting, in
+  arrival order; removing the limit cleared the queue.
+- Capacity floor: setting capacity below the confirmed count is refused, naming
+  the floor.
+- Pagination: `?page=1.2` renders, `?page=999` returns 200.
 
 Verification evidence for the P0 batch:
 

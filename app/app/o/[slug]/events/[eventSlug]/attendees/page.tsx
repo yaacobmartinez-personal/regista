@@ -8,7 +8,9 @@ import { EraseButton } from "./erase-button";
 
 const PAGE_SIZE = 50;
 
-const STATUS_FILTERS = ["ALL", "CONFIRMED", "WAITLIST", "CANCELLED"] as const;
+// Registrations are only ever confirmed or waitlisted today; nothing writes
+// CANCELLED, so offering it as a filter would return an empty list every time.
+const STATUS_FILTERS = ["ALL", "CONFIRMED", "WAITLIST"] as const;
 
 const statusStyles: Record<string, string> = {
   CONFIRMED: "bg-success-bg text-success",
@@ -47,7 +49,10 @@ export default async function AttendeesPage({
   )
     ? (status ?? "ALL")
     : "ALL";
-  const currentPage = Math.max(1, Number(page) || 1);
+  // Floored because a fractional page produces a non-integer offset, which the
+  // database rejects. Clamped to the last page further down, once the total is
+  // known, so an out-of-range value doesn't strand the reader on an empty list.
+  const requestedPage = Math.max(1, Math.floor(Number(page)) || 1);
 
   const where: Prisma.RegistrationWhereInput = {
     tenantId: ctx.tenant.id,
@@ -63,14 +68,8 @@ export default async function AttendeesPage({
       : {}),
   };
 
-  const [total, registrations, confirmedCount, checkedInCount] = await Promise.all([
+  const [total, confirmedCount, checkedInCount] = await Promise.all([
     prisma.registration.count({ where }),
-    prisma.registration.findMany({
-      where,
-      orderBy: { createdAt: "asc" },
-      skip: (currentPage - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-    }),
     prisma.registration.count({
       where: { tenantId: ctx.tenant.id, eventId: event.id, status: "CONFIRMED" },
     }),
@@ -84,6 +83,14 @@ export default async function AttendeesPage({
   ]);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentPage = Math.min(requestedPage, pageCount);
+
+  const registrations = await prisma.registration.findMany({
+    where,
+    orderBy: { createdAt: "asc" },
+    skip: (currentPage - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+  });
   const basePath = `/o/${ctx.tenant.slug}/events/${event.slug}/attendees`;
   const queryFor = (nextPage: number) => {
     const sp = new URLSearchParams();
@@ -136,7 +143,6 @@ export default async function AttendeesPage({
           <option value="ALL">All statuses</option>
           <option value="CONFIRMED">Confirmed</option>
           <option value="WAITLIST">Waitlist</option>
-          <option value="CANCELLED">Cancelled</option>
         </select>
         <button
           type="submit"

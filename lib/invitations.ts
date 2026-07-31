@@ -58,9 +58,14 @@ export async function redeemInvitation(
     });
     if (claimed.count === 0) return;
 
+    // Accepting an invitation may add someone to an organization, never change
+    // what they already are. An outstanding invitation is a stale snapshot: if
+    // it could rewrite the role, opening an old STAFF link would quietly demote
+    // a sitting admin — and it would do so without the last-admin guard, which
+    // only covers the team page.
     await tx.membership.upsert({
       where: { userId_tenantId: { userId, tenantId: invitation.tenantId } },
-      update: { role: invitation.role },
+      update: {},
       create: { userId, tenantId: invitation.tenantId, role: invitation.role },
     });
   });

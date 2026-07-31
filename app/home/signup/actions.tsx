@@ -186,8 +186,10 @@ export async function signup(
     throw error;
   }
 
-  await sendVerification({ email, organization, slug, tenantId: tenant.id });
-
+  // Set before sending. The organization is already committed, so if the mail
+  // fails the person must still reach the check-your-email screen — that is
+  // where "Resend" lives. Without the cookie they'd be stranded with their
+  // chosen address reading "taken" for the next 24 hours.
   const jar = await cookies();
   jar.set(PENDING_EMAIL_COOKIE, email, {
     httpOnly: true,
@@ -196,6 +198,14 @@ export async function signup(
     maxAge: 60 * 30,
     path: "/",
   });
+
+  try {
+    await sendVerification({ email, organization, slug, tenantId: tenant.id });
+  } catch {
+    // The organization exists either way; the check-your-email screen offers a
+    // resend, so send them there rather than to an error page.
+    console.error("Verification email failed to send.");
+  }
 
   redirect("/signup/check-email");
 }
@@ -219,14 +229,18 @@ export async function resendVerification(): Promise<{ sent: boolean; error?: str
   });
 
   if (membership) {
-    await sendVerification({
-      email,
-      organization: membership.tenant.name,
-      slug: membership.tenant.slug,
-      tenantId: membership.tenantId,
-    });
+    try {
+      await sendVerification({
+        email,
+        organization: membership.tenant.name,
+        slug: membership.tenant.slug,
+        tenantId: membership.tenantId,
+      });
+    } catch {
+      return { sent: false, error: "We couldn't send the email just now. Try again shortly." };
+    }
   }
 
-  // Same response whether or not anything was sent.
+  // Otherwise the same response whether or not anything was sent.
   return { sent: true };
 }

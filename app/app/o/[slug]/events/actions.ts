@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireMembership } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
-import { eventInputSchema, uniqueEventSlug } from "@/lib/events";
+import { eventInputSchema, promoteFromWaitlist, uniqueEventSlug } from "@/lib/events";
 import type { EventFormState } from "./shared";
 
 /**
@@ -93,20 +93,42 @@ export async function updateEvent(
   }
 
   const data = parsed.data;
+
+  // Capacity below the number of people already holding a place would leave the
+  // public page reading "Full" while the dashboard shows more registered than
+  // the limit. Refuse it and say what the floor is.
+  if (data.capacity !== null) {
+    const confirmed = await prisma.registration.count({
+      where: { tenantId: ctx.tenant.id, eventId: existing.id, status: "CONFIRMED" },
+    });
+    if (data.capacity < confirmed) {
+      return {
+        fieldErrors: {
+          capacity: `${confirmed} people already have a place, so capacity can't be lower than that.`,
+        },
+      };
+    }
+  }
+
   const slug = await uniqueEventSlug(ctx.tenant.id, data.slug || data.title, existing.id);
 
-  await prisma.event.update({
-    where: { id: existing.id },
-    data: {
-      slug,
-      title: data.title,
-      description: data.description,
-      startsAt: data.startsAt,
-      endsAt: data.endsAt,
-      timezone: data.timezone,
-      capacity: data.capacity,
-      waitlistEnabled: data.waitlistEnabled,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.event.update({
+      where: { id: existing.id },
+      data: {
+        slug,
+        title: data.title,
+        description: data.description,
+        startsAt: data.startsAt,
+        endsAt: data.endsAt,
+        timezone: data.timezone,
+        capacity: data.capacity,
+        waitlistEnabled: data.waitlistEnabled,
+      },
+    });
+
+    // If that made room, the people who have been waiting longest get it.
+    await promoteFromWaitlist(tx, existing.id);
   });
 
   revalidatePath(`/o/${ctx.tenant.slug}`);

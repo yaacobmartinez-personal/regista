@@ -69,8 +69,16 @@ export async function register(
       if (!found) return { outcome: "closed" as const };
       const event = found;
 
-      // Serialise concurrent registrations for this event.
-      await tx.$queryRaw`SELECT id FROM "Event" WHERE id = ${event.id} FOR UPDATE`;
+      // Serialise concurrent registrations for this event, and take the limits
+      // from the locked row. Reading them from the unlocked select above would
+      // pair a possibly-stale capacity with a fresh count, so a capacity change
+      // landing mid-transaction could still oversell.
+      const locked = await tx.$queryRaw<
+        { capacity: number | null; waitlistEnabled: boolean }[]
+      >`SELECT capacity, "waitlistEnabled" FROM "Event" WHERE id = ${event.id} FOR UPDATE`;
+
+      const limits = locked[0];
+      if (!limits) return { outcome: "closed" as const };
 
       const confirmed = await tx.registration.count({
         where: { eventId: event.id, status: "CONFIRMED" },
@@ -84,8 +92,8 @@ export async function register(
         timezone: event.timezone,
       };
 
-      const isFull = event.capacity !== null && confirmed >= event.capacity;
-      if (isFull && !event.waitlistEnabled) {
+      const isFull = limits.capacity !== null && confirmed >= limits.capacity;
+      if (isFull && !limits.waitlistEnabled) {
         return { outcome: "full" as const, event: summary };
       }
 
@@ -103,14 +111,32 @@ export async function register(
         outcome: (isFull ? "waitlisted" : "confirmed") as "waitlisted" | "confirmed",
         event: summary,
       };
+    },
+    {
+      // Registrations for one event queue behind the row lock by design, so
+      // allow more waiting room than the default before giving up.
+      maxWait: 10_000,
+      timeout: 15_000,
     });
   } catch (error) {
-    // Unique (eventId, email): this address already signed up.
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      return { outcome: "duplicate" };
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // Unique (eventId, email): this address already signed up.
+      if (error.code === "P2002") return { outcome: "duplicate" };
+
+      // The row lock deliberately serialises registrations for one event, so a
+      // rush at the moment registration opens can exceed the transaction
+      // window. That's contention, not a failure the person can do anything
+      // about, so ask them to retry rather than showing a crash.
+      if (error.code === "P2028" || error.code === "P2034") {
+        return {
+          error: "Lots of people are signing up right now. Please try again in a moment.",
+        };
+      }
+
+      // The event was deleted between resolving it and writing the row.
+      if (error.code === "P2003" || error.code === "P2025") {
+        return { outcome: "closed" };
+      }
     }
     throw error;
   }
@@ -134,14 +160,23 @@ export async function register(
       waitlisted,
     };
 
-    await sendTemplate({
-      to: email,
-      subject: waitlisted
-        ? `You're on the waitlist for ${event.title}`
-        : `You're registered for ${event.title}`,
-      template: <EventRegistration {...props} />,
-      text: eventRegistrationText(props),
-    });
+    // The place is already booked at this point. A mail failure must not throw
+    // that away and tell the person they aren't registered — on retry they'd be
+    // told they already are, which is the opposite of the truth.
+    try {
+      await sendTemplate({
+        to: email,
+        subject: waitlisted
+          ? `You're on the waitlist for ${event.title}`
+          : `You're registered for ${event.title}`,
+        template: <EventRegistration {...props} />,
+        text: eventRegistrationText(props),
+      });
+    } catch {
+      // Deliberately swallowed: the registration stands, and the confirmation
+      // is a courtesy rather than the record.
+      console.error("Registration confirmation email failed to send.");
+    }
 
     revalidatePath(`/${tenantSlug}/${eventSlug}`);
   }

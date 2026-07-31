@@ -130,19 +130,23 @@ export async function inviteMember(
   if (existingMember) return { alreadyMember: true, invitedEmail: email };
 
   // Re-inviting replaces any outstanding invitation rather than stacking them.
-  await prisma.invitation.deleteMany({
-    where: { tenantId: ctx.tenant.id, email, acceptedAt: null },
-  });
-
+  // Done in one transaction: interleaved with another admin inviting the same
+  // person, a delete-then-create could otherwise leave two live tokens, and
+  // revoking the visible one would leave the other still redeemable.
   const { raw, hash } = createSecureToken();
-  const invitation = await prisma.invitation.create({
-    data: {
-      tenantId: ctx.tenant.id,
-      email,
-      role: role as Role,
-      token: hash,
-      expiresAt: invitationExpiry(),
-    },
+  const invitation = await prisma.$transaction(async (tx) => {
+    await tx.invitation.deleteMany({
+      where: { tenantId: ctx.tenant.id, email, acceptedAt: null },
+    });
+    return tx.invitation.create({
+      data: {
+        tenantId: ctx.tenant.id,
+        email,
+        role,
+        token: hash,
+        expiresAt: invitationExpiry(),
+      },
+    });
   });
 
   const inviter = await prisma.user.findUnique({
@@ -159,12 +163,21 @@ export async function inviteMember(
     expiryDays: Math.round(INVITATION_TTL_HOURS / 24),
   };
 
-  await sendTemplate({
-    to: email,
-    subject: `${props.inviterName} invited you to ${props.organizationName}`,
-    template: <TeamInvite {...props} />,
-    text: teamInviteText(props),
-  });
+  try {
+    await sendTemplate({
+      to: email,
+      subject: `${props.inviterName} invited you to ${props.organizationName}`,
+      template: <TeamInvite {...props} />,
+      text: teamInviteText(props),
+    });
+  } catch {
+    // The invitation exists but nobody was told. Say so plainly and leave it
+    // listed as pending, so the admin can revoke and invite again.
+    console.error("Team invitation email failed to send.");
+    return {
+      error: "The invitation was created but we couldn't send the email. Try inviting again.",
+    };
+  }
 
   await recordAudit({
     tenantId: ctx.tenant.id,

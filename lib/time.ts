@@ -58,6 +58,22 @@ export function zonedInputToUtc(input: string, timeZone: string): Date {
   return new Date(naive.getTime() - zoneOffsetMs(firstPass, timeZone));
 }
 
+/**
+ * Whether a wall-clock time actually occurs in a zone.
+ *
+ * On the morning clocks go forward, an hour never happens: 02:30 does not exist
+ * on 8 March 2026 in New York. Converting it anyway lands on a different time —
+ * and which way it moves depends on the sign of the offset, so a western zone
+ * silently shifts the event an hour *earlier* than typed, and Santiago moves it
+ * to the previous day. Round-tripping the result is the reliable test.
+ */
+export function wallClockExists(input: string, timeZone: string): boolean {
+  const instant = zonedInputToUtc(input, timeZone);
+  if (Number.isNaN(instant.getTime())) return false;
+  const normalized = input.length === 16 ? input : input.slice(0, 16);
+  return utcToZonedInput(instant, timeZone) === normalized;
+}
+
 /** Render a UTC instant as a `datetime-local` value in `timeZone`. */
 export function utcToZonedInput(date: Date, timeZone: string): string {
   const shifted = new Date(date.getTime() + zoneOffsetMs(date, timeZone));

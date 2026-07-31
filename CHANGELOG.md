@@ -49,10 +49,44 @@ deployment would have been unsafe without.
 - Invitations are rate limited per organization and per admin, and names are
   stripped of anything that could break out of an email header.
 
+### Fixed
+
+- **An event time that doesn't exist is now refused instead of silently moved.**
+  On the morning clocks go forward an hour never happens, and scheduling into
+  that gap shifted the event — an hour *earlier* than typed in the Americas, and
+  to the previous day in Santiago. Times that occur twice (the autumn overlap)
+  are still accepted, since those do exist.
+- **Waiting lists move.** Raising an event's capacity, or removing the limit,
+  now promotes the people who have been waiting longest. Previously they stayed
+  queued indefinitely while later arrivals were confirmed ahead of them.
+- **Capacity can no longer be set below the number of people already holding a
+  place**, which left the public page reading "Full" while the dashboard showed
+  more registered than the limit.
+- **A rush of sign-ups no longer produces an error page.** Registrations for one
+  event are processed in turn to protect the last place, and a crowd could
+  exceed the waiting window; that now asks people to try again in a moment.
+- **A failed confirmation email no longer discards a successful registration.**
+  Registrants were shown an error and then told, on retry, that they were
+  already signed up. Signup has the same protection, and reaches the screen
+  where the email can be resent rather than stranding the address for a day.
+- **Accepting an invitation can no longer lower someone's existing role.** An
+  outstanding invitation is a snapshot; opening an old one could quietly demote
+  a sitting admin, bypassing the last-admin protection.
+- Re-inviting someone replaces the outstanding invitation atomically, so two
+  admins inviting at once can't leave a second link that still works after the
+  visible one is revoked.
+- The event capacity used to decide confirmed-versus-waitlisted is now read
+  under the same lock as the count, so a capacity change landing mid-sign-up
+  can't oversell.
+- An out-of-range or fractional page number in the attendee list no longer
+  errors or strands the reader on an empty page.
+
 ### Changed
 
 - The organization chooser now shows an unconfirmed organization with the reason,
   instead of a link that leads nowhere.
+- The attendee status filter no longer offers "Cancelled", which nothing ever
+  set and so never matched anything.
 
 ## [M5] — Designed emails — 2026-07-29
 
