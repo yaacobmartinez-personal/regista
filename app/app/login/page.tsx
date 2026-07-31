@@ -48,6 +48,8 @@ export default function LoginPage() {
               required
               autoComplete="email"
               placeholder="you@company.com"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "login-error" : undefined}
               className="rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-sm placeholder:text-faint focus-visible:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
             />
           </label>
@@ -59,12 +61,14 @@ export default function LoginPage() {
               required
               autoComplete="current-password"
               placeholder="••••••••"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "login-error" : undefined}
               className="rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-sm placeholder:text-faint focus-visible:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
             />
           </label>
 
           {error ? (
-            <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+            <p id="login-error" role="alert" className="text-sm text-danger">
               {error}
             </p>
           ) : null}

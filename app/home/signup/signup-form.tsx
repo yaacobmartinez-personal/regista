@@ -69,7 +69,7 @@ export function SignupForm({ rootDomain }: { rootDomain: string }) {
       ? "text-success"
       : slugStatus === "checking" || slugStatus === "idle"
         ? "text-faint"
-        : "text-red-600 dark:text-red-400";
+        : "text-danger";
 
   return (
     <form action={formAction} className="mt-8 flex flex-col gap-4">
@@ -84,10 +84,14 @@ export function SignupForm({ rootDomain }: { rootDomain: string }) {
             if (!slugEdited) scheduleSlugCheck(slugify(e.target.value));
           }}
           placeholder="Acme Events"
+          aria-invalid={state?.fieldErrors?.organization ? true : undefined}
+          aria-describedby={
+            state?.fieldErrors?.organization ? "signup-organization-error" : undefined
+          }
           className={fieldClass}
         />
         {state?.fieldErrors?.organization ? (
-          <span className="text-xs text-red-600 dark:text-red-400">
+          <span id="signup-organization-error" className="text-xs text-danger">
             {state.fieldErrors.organization}
           </span>
         ) : null}
@@ -108,6 +112,11 @@ export function SignupForm({ rootDomain }: { rootDomain: string }) {
             }}
             placeholder="acme"
             aria-describedby="slug-status"
+            aria-invalid={
+              state?.fieldErrors?.slug || slugStatus === "taken" || slugStatus === "reserved"
+                ? true
+                : undefined
+            }
             className={`${fieldClass} w-full rounded-r-none`}
           />
           <span className="grid place-items-center rounded-r-lg border border-l-0 border-line-strong bg-panel px-3 font-mono text-xs text-muted">
@@ -127,10 +136,12 @@ export function SignupForm({ rootDomain }: { rootDomain: string }) {
           required
           autoComplete="email"
           placeholder="you@company.com"
+          aria-invalid={state?.fieldErrors?.email ? true : undefined}
+          aria-describedby={state?.fieldErrors?.email ? "signup-email-error" : undefined}
           className={fieldClass}
         />
         {state?.fieldErrors?.email ? (
-          <span className="text-xs text-red-600 dark:text-red-400">
+          <span id="signup-email-error" className="text-xs text-danger">
             {state.fieldErrors.email}
           </span>
         ) : null}
@@ -145,17 +156,21 @@ export function SignupForm({ rootDomain }: { rootDomain: string }) {
           minLength={8}
           autoComplete="new-password"
           placeholder="At least 8 characters"
+          aria-invalid={state?.fieldErrors?.password ? true : undefined}
+          aria-describedby={
+            state?.fieldErrors?.password ? "signup-password-error" : undefined
+          }
           className={fieldClass}
         />
         {state?.fieldErrors?.password ? (
-          <span className="text-xs text-red-600 dark:text-red-400">
+          <span id="signup-password-error" className="text-xs text-danger">
             {state.fieldErrors.password}
           </span>
         ) : null}
       </label>
 
       {state?.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm text-danger">
           {state.error}
         </p>
       ) : null}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,11 +33,14 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        {/* Runs before paint so the stored theme is applied without a flash. */}
-        <script dangerouslySetInnerHTML={{ __html: noFlashTheme }} />
-      </head>
       <body className="min-h-full flex flex-col bg-canvas text-fg font-sans">
+        {/* Applies the stored theme before paint, so there's no flash of the
+            wrong one. `beforeInteractive` is the supported way to do this —
+            a bare <script> element is rendered by React, which warns that it
+            won't execute on client navigations. */}
+        <Script id="regista-theme" strategy="beforeInteractive">
+          {noFlashTheme}
+        </Script>
         {children}
       </body>
     </html>

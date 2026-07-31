@@ -6,8 +6,36 @@ one finding disproved and dropped (see the end).
 
 Ordered by what would hurt most in production.
 
-**Status: P0 (1–9) and P1 (10–17) fixed and verified at runtime. P2–P4
-outstanding.**
+**Status: P0 (1–9), P1 (10–17) and P2 (18–25) fixed and verified at runtime.
+P3–P4 outstanding.**
+
+P2 verification:
+
+- Zero `red-N` and zero `dark:` utilities remain in `app/` or `components/` — the
+  disconnected-variant class of bug is gone rather than patched.
+- Error text re-themes with the app: `#c11c1c` light (6.09:1), `#ff8f8f` dark
+  (7.97:1). Confirmed by triggering a real sign-in error and reading computed
+  styles in both themes.
+- Dark primary button on a clean load: `#0d1015` on `#6e86ff` — 5.91:1, up from
+  3.22:1.
+- Token values were chosen by measuring contrast against every surface they are
+  used on, not by eye; all now clear 4.5:1 in both themes.
+- Both not-found screens render with product chrome and wording that doesn't
+  disclose whether the thing exists.
+- Field errors are linked to their inputs: submitting a short password sets
+  `aria-invalid="true"` and `aria-describedby="signup-password-error"`, and that
+  id resolves to the message. All six forms wired (17 associations).
+- Row actions are individually named — "Erase details for Priya Raman", "Check in
+  Priya Raman" — and confirming moves focus onto the confirm button rather than
+  dropping it to the document. Table headers carry `scope="col"`.
+- Dashboard tabs: on `/team`, Team is `aria-current="page"` and Events is not.
+- Timestamps render with an explicit zone ("28 Jul, 14:49 UTC").
+- No console errors on a fresh page load.
+
+Also fixed while here: the theme script was emitting a React warning on every
+page. An earlier attempt to fix this by moving it into `<head>` did not work —
+it needed `next/script` with `beforeInteractive`. Now verified clean in a fresh
+tab, with the no-flash behaviour intact.
 
 P1 verification:
 

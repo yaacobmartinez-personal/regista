@@ -30,7 +30,7 @@ function slugifyTitle(value: string): string {
 
 const field =
   "rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-sm placeholder:text-faint focus-visible:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25";
-const errorText = "text-xs text-red-600 dark:text-red-400";
+const errorText = "text-xs text-danger";
 
 export function EventForm({
   tenantSlug,
@@ -67,6 +67,8 @@ export function EventForm({
         <span className="font-medium">Title</span>
         <input
           name="title"
+          aria-invalid={state?.fieldErrors?.title ? true : undefined}
+          aria-describedby={state?.fieldErrors?.title ? "event-title-error" : undefined}
           required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -74,7 +76,7 @@ export function EventForm({
           className={field}
         />
         {state?.fieldErrors?.title ? (
-          <span className={errorText}>{state.fieldErrors.title}</span>
+          <span id="event-title-error" className={errorText}>{state.fieldErrors.title}</span>
         ) : null}
       </label>
 
@@ -113,13 +115,15 @@ export function EventForm({
           <span className="font-medium">Starts</span>
           <input
             name="startsAt"
+          aria-invalid={state?.fieldErrors?.startsAt ? true : undefined}
+          aria-describedby={state?.fieldErrors?.startsAt ? "event-startsat-error" : undefined}
             type="datetime-local"
             required
             defaultValue={event?.startsAtLocal ?? ""}
             className={field}
           />
           {state?.fieldErrors?.startsAt ? (
-            <span className={errorText}>{state.fieldErrors.startsAt}</span>
+            <span id="event-startsat-error" className={errorText}>{state.fieldErrors.startsAt}</span>
           ) : null}
         </label>
 
@@ -129,12 +133,14 @@ export function EventForm({
           </span>
           <input
             name="endsAt"
+          aria-invalid={state?.fieldErrors?.endsAt ? true : undefined}
+          aria-describedby={state?.fieldErrors?.endsAt ? "event-endsat-error" : undefined}
             type="datetime-local"
             defaultValue={event?.endsAtLocal ?? ""}
             className={field}
           />
           {state?.fieldErrors?.endsAt ? (
-            <span className={errorText}>{state.fieldErrors.endsAt}</span>
+            <span id="event-endsat-error" className={errorText}>{state.fieldErrors.endsAt}</span>
           ) : null}
         </label>
       </div>
@@ -143,6 +149,8 @@ export function EventForm({
         <span className="font-medium">Timezone</span>
         <select
           name="timezone"
+          aria-invalid={state?.fieldErrors?.timezone ? true : undefined}
+          aria-describedby={state?.fieldErrors?.timezone ? "event-timezone-error" : undefined}
           defaultValue={event?.timezone ?? "UTC"}
           ref={(el) => {
             if (!el || zonePreselected.current) return;
@@ -164,7 +172,7 @@ export function EventForm({
           timezone, wherever they are.
         </span>
         {state?.fieldErrors?.timezone ? (
-          <span className={errorText}>{state.fieldErrors.timezone}</span>
+          <span id="event-timezone-error" className={errorText}>{state.fieldErrors.timezone}</span>
         ) : null}
       </label>
 
@@ -174,6 +182,8 @@ export function EventForm({
         </span>
         <input
           name="capacity"
+          aria-invalid={state?.fieldErrors?.capacity ? true : undefined}
+          aria-describedby={state?.fieldErrors?.capacity ? "event-capacity-error" : undefined}
           type="number"
           min={1}
           inputMode="numeric"
@@ -182,7 +192,7 @@ export function EventForm({
           className={`${field} max-w-48`}
         />
         {state?.fieldErrors?.capacity ? (
-          <span className={errorText}>{state.fieldErrors.capacity}</span>
+          <span id="event-capacity-error" className={errorText}>{state.fieldErrors.capacity}</span>
         ) : null}
       </label>
 
@@ -203,7 +213,7 @@ export function EventForm({
       </label>
 
       {state?.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm text-danger">
           {state.error}
         </p>
       ) : null}

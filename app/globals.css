@@ -6,6 +6,8 @@
    Palette lives in @theme so Tailwind emits `--color-*` custom properties and its
    utilities reference them via var(). Dark mode overrides those same properties in a
    more specific selector, so `bg-surface`, `bg-accent`, etc. re-theme at runtime. */
+/* Foreground values are chosen to clear WCAG AA (4.5:1) against every surface
+   they are used on — surface, panel and canvas — in both themes. */
 @theme {
   --color-canvas: #f6f7f9;
   --color-surface: #ffffff;
@@ -14,12 +16,14 @@
   --color-line-strong: #d2d7de;
   --color-fg: #191c22;
   --color-muted: #616b7a;
-  --color-faint: #8a93a1;
+  --color-faint: #656e7c;
   --color-accent: #3355e6;
   --color-accent-hover: #2843c4;
   --color-on-accent: #ffffff;
-  --color-success: #1e8e5a;
-  --color-success-bg: rgba(30, 142, 90, 0.08);
+  --color-success: #177a4c;
+  --color-success-bg: rgba(23, 122, 76, 0.08);
+  --color-danger: #c11c1c;
+  --color-danger-bg: rgba(193, 28, 28, 0.08);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -37,12 +41,16 @@
   --color-line-strong: #333c48;
   --color-fg: #e6e9ef;
   --color-muted: #949ead;
-  --color-faint: #6b7482;
+  --color-faint: #828c9b;
   --color-accent: #6e86ff;
   --color-accent-hover: #8499ff;
-  --color-on-accent: #ffffff;
+  /* Dark accent is light enough that white text on it fails AA; near-black
+     reads at 5.91 on the accent and 7.24 on its hover. */
+  --color-on-accent: #0d1015;
   --color-success: #35c07e;
   --color-success-bg: rgba(53, 192, 126, 0.12);
+  --color-danger: #ff8f8f;
+  --color-danger-bg: rgba(255, 143, 143, 0.12);
 }
 
 body {

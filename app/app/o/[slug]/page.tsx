@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { EventStatus } from "@prisma/client";
 import { requireMembership } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 import { setEventStatus } from "./events/actions";
@@ -17,7 +18,7 @@ function formatWhen(startsAt: Date, timezone: string): string {
   return `${when} ${zoneLabel(startsAt, timezone)}`;
 }
 
-const statusStyles: Record<string, string> = {
+const statusStyles: Record<EventStatus, string> = {
   PUBLISHED: "bg-success-bg text-success",
   DRAFT: "bg-panel text-muted",
   CLOSED: "bg-panel text-faint",

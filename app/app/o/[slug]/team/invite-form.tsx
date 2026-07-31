@@ -25,6 +25,8 @@ export function InviteForm({ tenantSlug }: { tenantSlug: string }) {
             type="email"
             required
             placeholder="colleague@company.com"
+            aria-invalid={state?.fieldErrors?.email ? true : undefined}
+            aria-describedby={state?.fieldErrors?.email ? "invite-email-error" : undefined}
             className={field}
           />
         </label>
@@ -47,12 +49,12 @@ export function InviteForm({ tenantSlug }: { tenantSlug: string }) {
       </div>
 
       {state?.fieldErrors?.email ? (
-        <p className="text-xs text-red-600 dark:text-red-400">
+        <p id="invite-email-error" className="text-xs text-danger">
           {state.fieldErrors.email}
         </p>
       ) : null}
       {state?.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm text-danger">
           {state.error}
         </p>
       ) : null}

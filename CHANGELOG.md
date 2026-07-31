@@ -81,12 +81,38 @@ deployment would have been unsafe without.
 - An out-of-range or fractional page number in the attendee list no longer
   errors or strands the reader on an empty page.
 
+### Accessibility
+
+- **Error messages were unreadable for anyone whose computer is set to dark
+  mode.** They were coloured by the system preference rather than by the app's
+  own theme — which deliberately ignores that preference — so the pale text
+  intended for a dark background was being shown on white, at roughly half the
+  contrast needed to read it. Every form in the product was affected. Errors now
+  follow the app's theme.
+- Buttons in dark mode were white text on a light blue that didn't meet the
+  contrast standard; they now use dark text on that blue.
+- The dimmest text colour, and the green used for confirmations in light mode,
+  both fell below the standard on the surfaces they appear on. Both darkened.
+- **Being refused access no longer shows a bare browser error page.** Denial is
+  deliberately indistinguishable from "not found", so that screen carries real
+  weight; it now has the product's own design and a way back. Unexpected errors
+  in the dashboard get the same treatment.
+- Row actions in the attendee list now name the person they act on, so someone
+  using a screen reader isn't offered fifty identical "Erase" buttons for an
+  irreversible deletion. Confirming moves focus onto the confirm button rather
+  than dropping it to the top of the page.
+- The dashboard tabs now show which section you're actually in — "Events" was
+  marked as current even while you were on Team — and announce it to assistive
+  technology.
+
 ### Changed
 
 - The organization chooser now shows an unconfirmed organization with the reason,
   instead of a link that leads nowhere.
 - The attendee status filter no longer offers "Cancelled", which nothing ever
   set and so never matched anything.
+- Registration and invitation timestamps are shown in a stated timezone instead
+  of whichever one the server happened to be running in, unlabelled.
 
 ## [M5] — Designed emails — 2026-07-29
 

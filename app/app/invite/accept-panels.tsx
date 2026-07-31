@@ -30,7 +30,7 @@ export function AcceptPanel({ token }: { token: string }) {
     <form action={formAction} className="mt-8">
       <input type="hidden" name="token" value={token} />
       {state?.error ? (
-        <p role="alert" className="mb-4 text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="mb-4 text-sm text-danger">
           {state.error}
         </p>
       ) : null}
@@ -74,9 +74,17 @@ export function CreateAccountPanel({
 
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="font-medium">Your name</span>
-        <input name="name" required autoComplete="name" placeholder="Alex Doe" className={field} />
+        <input
+          name="name"
+          required
+          autoComplete="name"
+          placeholder="Alex Doe"
+          aria-invalid={state?.fieldErrors?.name ? true : undefined}
+          aria-describedby={state?.fieldErrors?.name ? "invite-name-error" : undefined}
+          className={field}
+        />
         {state?.fieldErrors?.name ? (
-          <span className="text-xs text-red-600 dark:text-red-400">
+          <span id="invite-name-error" className="text-xs text-danger">
             {state.fieldErrors.name}
           </span>
         ) : null}
@@ -91,17 +99,21 @@ export function CreateAccountPanel({
           minLength={8}
           autoComplete="new-password"
           placeholder="At least 8 characters"
+          aria-invalid={state?.fieldErrors?.password ? true : undefined}
+          aria-describedby={
+            state?.fieldErrors?.password ? "invite-password-error" : undefined
+          }
           className={field}
         />
         {state?.fieldErrors?.password ? (
-          <span className="text-xs text-red-600 dark:text-red-400">
+          <span id="invite-password-error" className="text-xs text-danger">
             {state.fieldErrors.password}
           </span>
         ) : null}
       </label>
 
       {state?.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm text-danger">
           {state.error}
         </p>
       ) : null}

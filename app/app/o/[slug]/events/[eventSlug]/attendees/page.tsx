@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Prisma, RegistrationStatus } from "@prisma/client";
 import { requireMembership } from "@/lib/authz";
 import { prisma } from "@/lib/db";
+import { formatInZone, zoneLabel } from "@/lib/time";
 import { toggleCheckIn } from "./actions";
 import { EraseButton } from "./erase-button";
 
@@ -12,19 +13,28 @@ const PAGE_SIZE = 50;
 // CANCELLED, so offering it as a filter would return an empty list every time.
 const STATUS_FILTERS = ["ALL", "CONFIRMED", "WAITLIST"] as const;
 
-const statusStyles: Record<string, string> = {
+// Typed by the enum, so adding a status is a compile error here rather than a
+// badge that silently renders with an undefined class.
+const statusStyles: Record<RegistrationStatus, string> = {
   CONFIRMED: "bg-success-bg text-success",
   WAITLIST: "bg-panel text-muted",
   CANCELLED: "bg-panel text-faint",
 };
 
-function formatWhen(value: Date): string {
-  return value.toLocaleString("en-GB", {
+/**
+ * Shown in the event's own timezone, with the zone named.
+ *
+ * Plain `toLocaleString` renders in whatever zone the server process happens to
+ * run in, unlabelled — so an organizer reading check-in times could be hours out
+ * with nothing to tell them.
+ */
+function formatWhen(value: Date, timezone: string): string {
+  return `${formatInZone(value, timezone, {
     day: "numeric",
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
-  });
+  })} ${zoneLabel(value, timezone)}`;
 }
 
 export default async function AttendeesPage({
@@ -173,16 +183,24 @@ export default async function AttendeesPage({
           <table className="w-full min-w-[46rem] text-sm">
             <thead>
               <tr className="border-b border-line text-left">
-                <th className="px-5 py-3 font-medium text-muted">Name</th>
-                <th className="px-5 py-3 font-medium text-muted">Email</th>
-                <th className="px-5 py-3 font-medium text-muted">Status</th>
-                <th className="px-5 py-3 font-medium text-muted">Registered</th>
-                <th className="px-5 py-3 text-right font-medium text-muted">Actions</th>
+                <th scope="col" className="px-5 py-3 font-medium text-muted">Name</th>
+                <th scope="col" className="px-5 py-3 font-medium text-muted">Email</th>
+                <th scope="col" className="px-5 py-3 font-medium text-muted">Status</th>
+                <th scope="col" className="px-5 py-3 font-medium text-muted">Registered</th>
+                <th scope="col" className="px-5 py-3 text-right font-medium text-muted">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {registrations.map((r) => {
                 const erased = r.anonymizedAt !== null;
+                // Row actions repeat down the page, so each needs a name of its
+                // own — otherwise a screen reader hears "Check in, button" fifty
+                // times with nothing to tell them apart.
+                const attendeeLabel = erased
+                  ? "an erased attendee"
+                  : (r.name ?? r.email);
                 return (
                   <tr key={r.id} className="border-b border-line last:border-b-0">
                     <td className="px-5 py-3">
@@ -210,7 +228,7 @@ export default async function AttendeesPage({
                       ) : null}
                     </td>
                     <td className="px-5 py-3 tabular-nums text-muted">
-                      {formatWhen(r.createdAt)}
+                      {formatWhen(r.createdAt, event.timezone)}
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1.5">
@@ -225,7 +243,12 @@ export default async function AttendeesPage({
                           />
                           <button
                             type="submit"
-                            className="rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-panel"
+                            aria-label={
+                              r.checkedInAt
+                                ? `Undo check-in for ${attendeeLabel}`
+                                : `Check in ${attendeeLabel}`
+                            }
+                            className="rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
                           >
                             {r.checkedInAt ? "Undo check-in" : "Check in"}
                           </button>
@@ -235,6 +258,7 @@ export default async function AttendeesPage({
                             tenantSlug={ctx.tenant.slug}
                             eventSlug={event.slug}
                             registrationId={r.id}
+                            attendeeLabel={attendeeLabel}
                           />
                         )}
                       </div>

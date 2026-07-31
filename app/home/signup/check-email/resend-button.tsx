@@ -31,7 +31,7 @@ export function ResendButton() {
       {message ? (
         <span
           role="status"
-          className={`text-xs ${isError ? "text-red-600 dark:text-red-400" : "text-success"}`}
+          className={`text-xs ${isError ? "text-danger" : "text-success"}`}
         >
           {message}
         </span>

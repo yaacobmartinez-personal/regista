@@ -1,16 +1,22 @@
 import { requireMembership, ROLE_LABEL, ROLE_SUMMARY } from "@/lib/authz";
 import { prisma } from "@/lib/db";
+import { formatInZone } from "@/lib/time";
 import { InviteForm } from "./invite-form";
 import { changeRole, removeMember, revokeInvitation } from "./actions";
 
 export const metadata = { title: "Team — Regista" };
 
+/**
+ * Invitation expiry. Rendered in UTC and labelled, because an invitation isn't
+ * tied to a place the way an event is — and an unlabelled date would otherwise
+ * silently mean whatever zone the server runs in.
+ */
 function formatDate(value: Date): string {
-  return value.toLocaleDateString("en-GB", {
+  return `${formatInZone(value, "UTC", {
     day: "numeric",
     month: "short",
     year: "numeric",
-  });
+  })} UTC`;
 }
 
 /**
@@ -100,7 +106,7 @@ export default async function TeamPage({
                     className="rounded-full bg-panel px-2.5 py-1 font-mono text-[11px] text-muted"
                     title="The only admin — promote someone else first"
                   >
-                    {m.role}
+                    {ROLE_LABEL[m.role]}
                   </span>
                 ) : (
                   <form action={changeRole}>

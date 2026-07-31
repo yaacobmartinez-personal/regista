@@ -100,11 +100,22 @@ export function RegisterForm({
         </p>
       ) : null}
 
+      {/* Errors carry an id referenced by aria-describedby, so assistive tech
+          reads the problem with the field rather than leaving it to be inferred
+          from the accessible name. */}
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="font-medium">Your name</span>
-        <input name="name" required autoComplete="name" placeholder="Alex Doe" className={field} />
+        <input
+          name="name"
+          required
+          autoComplete="name"
+          placeholder="Alex Doe"
+          aria-invalid={state?.fieldErrors?.name ? true : undefined}
+          aria-describedby={state?.fieldErrors?.name ? "register-name-error" : undefined}
+          className={field}
+        />
         {state?.fieldErrors?.name ? (
-          <span className="text-xs text-red-600 dark:text-red-400">
+          <span id="register-name-error" className="text-xs text-danger">
             {state.fieldErrors.name}
           </span>
         ) : null}
@@ -118,17 +129,19 @@ export function RegisterForm({
           required
           autoComplete="email"
           placeholder="you@example.com"
+          aria-invalid={state?.fieldErrors?.email ? true : undefined}
+          aria-describedby={state?.fieldErrors?.email ? "register-email-error" : undefined}
           className={field}
         />
         {state?.fieldErrors?.email ? (
-          <span className="text-xs text-red-600 dark:text-red-400">
+          <span id="register-email-error" className="text-xs text-danger">
             {state.fieldErrors.email}
           </span>
         ) : null}
       </label>
 
       {state?.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm text-danger">
           {state.error}
         </p>
       ) : null}

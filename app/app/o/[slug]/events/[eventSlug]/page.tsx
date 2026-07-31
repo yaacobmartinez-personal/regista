@@ -89,7 +89,7 @@ export default async function EditEventPage({
               <input type="hidden" name="eventId" value={event.id} />
               <button
                 type="submit"
-                className="rounded-lg border border-line-strong px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-panel dark:text-red-400"
+                className="rounded-lg border border-line-strong px-3 py-2 text-sm font-medium text-danger transition-colors hover:bg-panel"
               >
                 Delete
               </button>
