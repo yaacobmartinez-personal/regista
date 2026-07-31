@@ -140,11 +140,17 @@ Copy `.env.example` to `.env`. Keys:
 Secrets live only in `.env` (gitignored). Never log tokens or registrant PII: the console
 email transport redacts tokens and refuses to run in production at all.
 
-> **Known deviation.** Verification and invitation links carry their token as a query
-> parameter (`/verify?token=…`, `/invite?token=…`), and the attendee search puts the search
-> term — often a name or email — in the URL. Query strings persist in history, `Referer`,
-> and proxy logs. This is tracked as P3 in [AUDIT-FINDINGS.md](AUDIT-FINDINGS.md) and is not
-> yet fixed; treat the rule above as the intent, not the current state.
+Attendee search terms are held in a short-lived httpOnly cookie rather than the query
+string — see `attendees/filter-actions.ts`. A filtered guest list is therefore not
+shareable by URL, which for a list of people's contact details is the right trade.
+
+> **Known deviation.** Verification and invitation links still carry their token as a query
+> parameter, because that is what a link in an email can express. The exposure is reduced
+> rather than removed: `Referrer-Policy` keeps it out of the `Referer` header, verification
+> strips the token from the address bar once used, and neither link does anything until an
+> explicit action. It can still appear in server access logs. Moving to a token exchanged
+> for a session on first view would close that, and is recorded in
+> [AUDIT-FINDINGS.md](AUDIT-FINDINGS.md).
 
 ---
 
@@ -384,6 +390,32 @@ The palette lives in `app/globals.css`: values in `@theme` for light, overridden
   — several of the originals failed, including white-on-accent in dark mode at 3.22:1.
 - The theme is applied pre-paint by a `next/script` with `strategy="beforeInteractive"` in
   the root layout. A plain `<script>` element works but makes React warn on every page.
+
+## 8j. Privacy mechanics
+
+- **Verification never writes during render.** `inspectVerification` reads;
+  `redeemVerification` (called from an action) writes, claiming the token with a
+  conditional update so simultaneous redemptions produce one activation. Anything that
+  follows links in a mailbox would otherwise spend the token before the person saw it.
+- **Retention.** [`lib/retention.ts`](../lib/retention.ts) removes spent and expired
+  verification tokens and invitations after a week — both store an email address and were
+  previously kept forever. There is no scheduler here, so it runs detached from the signup
+  path and on demand via `pnpm db:prune`. Run the latter on a schedule in production. The
+  full policy, including what is *not* automated, is in
+  [DATA-RETENTION.md](DATA-RETENTION.md).
+- **Erasure** clears the name, custom fields and check-in time, replaces the address with a
+  non-reversible placeholder, and coarsens `createdAt` to the day. The exact second was
+  enough to re-identify a row against a guest list exported before the erasure. Call it
+  anonymisation, not destruction: earlier exports and delivered emails are outside our
+  reach, which is why exports are logged.
+- **Audit log** records exports, erasures, check-ins, event deletion and every team change.
+  It stores identifiers only, and `onDelete: Restrict` stops it being cascaded away with the
+  organization it holds accountable.
+- **Attendee mail sets `reply_to`** to the organization's longest-standing admin. The
+  message tells attendees to reply if they want their details changed or removed, and that
+  is the only channel offered — without it the stated route did not exist.
+- **Security headers** live in [`next.config.ts`](../next.config.ts). `Referrer-Policy` is
+  load-bearing, not decoration: it keeps tokenised links out of the `Referer` header.
 
 ## 9. Security & privacy (build-time requirements)
 

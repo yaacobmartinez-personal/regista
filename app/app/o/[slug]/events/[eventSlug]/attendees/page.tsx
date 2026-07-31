@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import type { Prisma, RegistrationStatus } from "@prisma/client";
 import { requireMembership } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 import { formatInZone, zoneLabel } from "@/lib/time";
 import { toggleCheckIn } from "./actions";
+import { applyAttendeeFilter, clearAttendeeFilter } from "./filter-actions";
+import { attendeeFilterCookie } from "./filter-shared";
 import { EraseButton } from "./erase-button";
 
 const PAGE_SIZE = 50;
@@ -42,10 +45,10 @@ export default async function AttendeesPage({
   searchParams,
 }: {
   params: Promise<{ slug: string; eventSlug: string }>;
-  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { slug, eventSlug } = await params;
-  const { q, status, page } = await searchParams;
+  const { page } = await searchParams;
   const ctx = await requireMembership(slug);
 
   const event = await prisma.event.findFirst({
@@ -53,12 +56,27 @@ export default async function AttendeesPage({
   });
   if (!event) notFound();
 
-  const search = (q ?? "").trim();
-  const statusFilter = STATUS_FILTERS.includes(
-    (status ?? "ALL") as (typeof STATUS_FILTERS)[number],
-  )
-    ? (status ?? "ALL")
-    : "ALL";
+  // The search term is a person's name or email, so it lives in a cookie rather
+  // than the query string — see filter-actions.ts. Only the page number, which
+  // identifies nobody, stays in the URL.
+  const jar = await cookies();
+  const rawFilter = jar.get(attendeeFilterCookie(event.id))?.value;
+  let search = "";
+  let statusFilter: string = "ALL";
+  if (rawFilter) {
+    try {
+      const parsed = JSON.parse(rawFilter) as { q?: string; status?: string };
+      search = (parsed.q ?? "").trim();
+      const candidate = parsed.status ?? "ALL";
+      statusFilter = STATUS_FILTERS.includes(
+        candidate as (typeof STATUS_FILTERS)[number],
+      )
+        ? candidate
+        : "ALL";
+    } catch {
+      // Malformed cookie: fall back to no filter rather than failing the page.
+    }
+  }
   // Floored because a fractional page produces a non-integer offset, which the
   // database rejects. Clamped to the last page further down, once the total is
   // known, so an out-of-range value doesn't strand the reader on an empty list.
@@ -102,14 +120,10 @@ export default async function AttendeesPage({
     take: PAGE_SIZE,
   });
   const basePath = `/o/${ctx.tenant.slug}/events/${event.slug}/attendees`;
-  const queryFor = (nextPage: number) => {
-    const sp = new URLSearchParams();
-    if (search) sp.set("q", search);
-    if (statusFilter !== "ALL") sp.set("status", statusFilter);
-    if (nextPage > 1) sp.set("page", String(nextPage));
-    const qs = sp.toString();
-    return qs ? `${basePath}?${qs}` : basePath;
-  };
+  // Only the page number goes in the link; the filter travels in the cookie, so
+  // paging through results never writes anyone's name into a URL.
+  const queryFor = (nextPage: number) =>
+    nextPage > 1 ? `${basePath}?page=${nextPage}` : basePath;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-8">
@@ -136,7 +150,9 @@ export default async function AttendeesPage({
         </a>
       </div>
 
-      <form method="get" className="mt-6 flex flex-wrap items-center gap-2">
+      <form action={applyAttendeeFilter} className="mt-6 flex flex-wrap items-center gap-2">
+        <input type="hidden" name="tenantSlug" value={ctx.tenant.slug} />
+        <input type="hidden" name="eventId" value={event.id} />
         <input
           name="q"
           defaultValue={search}
@@ -160,15 +176,20 @@ export default async function AttendeesPage({
         >
           Apply
         </button>
-        {search || statusFilter !== "ALL" ? (
-          <Link
-            href={basePath}
-            className="text-sm text-muted underline-offset-4 hover:text-fg hover:underline"
-          >
-            Clear
-          </Link>
-        ) : null}
       </form>
+
+      {search || statusFilter !== "ALL" ? (
+        <form action={clearAttendeeFilter} className="mt-2">
+          <input type="hidden" name="tenantSlug" value={ctx.tenant.slug} />
+          <input type="hidden" name="eventId" value={event.id} />
+          <button
+            type="submit"
+            className="text-sm text-muted underline-offset-4 hover:text-fg hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+          >
+            Clear filter
+          </button>
+        </form>
+      ) : null}
 
       {registrations.length === 0 ? (
         <div className="mt-6 rounded-xl border border-dashed border-line-strong bg-surface p-10 text-center">

@@ -9,9 +9,42 @@ Nothing has been publicly released yet. Entries are grouped by build milestone
 
 ## [Unreleased]
 
-All six milestones are built and walked through. Remaining work is the privacy
-and maintainability findings (P3–P4 in `docs/AUDIT-FINDINGS.md`), plus the
-verified sending domain needed before any real send.
+All six milestones are built and walked through. Remaining work is the
+maintainability findings (P4 in `docs/AUDIT-FINDINGS.md`), plus the verified
+sending domain needed before any real send.
+
+### Privacy
+
+- **A confirmation link is no longer used up by something other than a person.**
+  Mail clients and security scanners follow links in messages; opening the link
+  used to activate the organization outright, so an organization could be
+  activated — and the link spent — before the recipient ever clicked. Activating
+  is now a deliberate step, and the link is taken out of the address bar once
+  used.
+- **"Reply to the organizer" now actually reaches them.** The confirmation email
+  told attendees to reply if they needed their details corrected or removed, but
+  replies went to an unattended address. Since that is the only route offered,
+  the stated way to exercise those rights did not work.
+- **Every event page now has a privacy notice** naming the organization as the
+  one responsible for attendees' details, what is collected and why, that the
+  email provider sees the name and address, how long things are kept, and what
+  can be asked for. The registration form links to it.
+- **A written retention policy exists** (`docs/DATA-RETENTION.md`), and the
+  records that quietly kept email addresses forever — spent confirmation links
+  and accepted invitations — are now removed a week after they stop being useful.
+- **Erasure is harder to undo.** Clearing someone's details used to leave an
+  exact sign-up time, enough to match the row back to them using a guest list
+  exported earlier. The time is now kept only to the day, and check-in is
+  cleared.
+- **Checking someone in is recorded**, like exports and erasures. It asserts that
+  a named person was somewhere at a time, and it was the one such action going
+  unlogged.
+- **The record of who accessed personal data outlives the organization.** It used
+  to be deleted along with it, which defeated the point.
+- Searching the guest list no longer puts the name or email you typed into the
+  address bar, browser history, or server logs.
+- Standard protective headers are set, including one that stops confirmation
+  links leaking to other sites through the referrer.
 
 ## [M6] — Team members — 2026-07-29
 

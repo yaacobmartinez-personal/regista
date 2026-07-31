@@ -6,8 +6,21 @@ one finding disproved and dropped (see the end).
 
 Ordered by what would hurt most in production.
 
-**Status: P0 (1–9), P1 (10–17) and P2 (18–25) fixed and verified at runtime.
-P3–P4 outstanding.**
+**Status: P0 (1–9), P1 (10–17), P2 (18–25) and P3 (26–35) fixed and verified at
+runtime. P4 outstanding.**
+
+P3 verification:
+
+- A verification link followed twice by `curl` — standing in for a mail scanner —
+  leaves the organization `PENDING` and the token unspent. Activation now needs
+  an explicit action, and the token is stripped from the address bar afterwards.
+- Security headers present on responses: `Referrer-Policy`, `X-Frame-Options`,
+  `X-Content-Type-Options`, `Permissions-Policy`, HSTS, and a CSP.
+- Searching for `priya@example.com` matches the right row and the URL stays
+  `/attendees` — no term, and paging links carry only a page number.
+- Registration notice names the organization as the one holding the data and
+  links to a per-organization privacy page.
+- `pnpm db:prune` runs and reports what it removed.
 
 P2 verification:
 

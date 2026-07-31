@@ -26,6 +26,17 @@ export async function toggleCheckIn(formData: FormData): Promise<void> {
   });
   if (updated.count === 0) notFound();
 
+  // Check-in asserts that a named person was physically somewhere at a time,
+  // which is about the most sensitive thing derived here — so it is recorded
+  // like the other personal-data actions.
+  await recordAudit({
+    tenantId: ctx.tenant.id,
+    actorUserId: ctx.userId,
+    action: "CHECK_IN_REGISTRATION",
+    targetType: "Registration",
+    targetId: registrationId,
+  });
+
   revalidatePath(`/o/${tenantSlug}/events/${eventSlug}/attendees`);
 }
 
@@ -45,10 +56,16 @@ export async function eraseRegistration(formData: FormData): Promise<void> {
 
   const registration = await prisma.registration.findFirst({
     where: { id: registrationId, tenantId: ctx.tenant.id },
-    select: { id: true, anonymizedAt: true },
+    select: { id: true, anonymizedAt: true, createdAt: true },
   });
   if (!registration) notFound();
   if (registration.anonymizedAt) return; // already erased
+
+  // Coarsen the sign-up time to the day as well as clearing the identifiers.
+  // Kept to the second, the row could be matched back to a person using any CSV
+  // exported before the erasure — the timestamp alone is close to unique.
+  const coarseCreatedAt = new Date(registration.createdAt);
+  coarseCreatedAt.setUTCHours(0, 0, 0, 0);
 
   await prisma.registration.update({
     where: { id: registration.id },
@@ -56,6 +73,10 @@ export async function eraseRegistration(formData: FormData): Promise<void> {
       name: null,
       email: `deleted+${registration.id}@anon.invalid`,
       customFields: Prisma.DbNull,
+      createdAt: coarseCreatedAt,
+      // Check-in time is equally identifying, and an erased record doesn't need
+      // to say whether they turned up.
+      checkedInAt: null,
       anonymizedAt: new Date(),
     },
   });

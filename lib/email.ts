@@ -16,6 +16,15 @@ export type EmailMessage = {
   html: string;
   /** Plain-text alternative. Also what dev logging prints. */
   text: string;
+  /**
+   * Where replies should go.
+   *
+   * Attendee mail tells people to reply to the organizer if they need their
+   * details corrected or removed — which is the only route the product offers
+   * them. Without this, that reply reaches a no-reply mailbox and the stated
+   * channel doesn't exist.
+   */
+  replyTo?: string;
 };
 
 /**
@@ -34,7 +43,13 @@ function extractLink(text: string): string | null {
   return text.match(/https?:\/\/\S*[?&]token=\S+/i)?.[0] ?? null;
 }
 
-export async function sendEmail({ to, subject, html, text }: EmailMessage): Promise<void> {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+  replyTo,
+}: EmailMessage): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   const isProduction = process.env.NODE_ENV === "production";
 
@@ -50,6 +65,7 @@ export async function sendEmail({ to, subject, html, text }: EmailMessage): Prom
         "",
         "──────────── email (dev console transport) ────────────",
         `To:      ${to}`,
+        replyTo ? `Reply-To: ${replyTo}` : "",
         `Subject: ${subject}`,
         "",
         redactTokens(text),
@@ -78,6 +94,7 @@ export async function sendEmail({ to, subject, html, text }: EmailMessage): Prom
       subject,
       html,
       text,
+      ...(replyTo ? { reply_to: replyTo } : {}),
     }),
   });
 
@@ -93,11 +110,13 @@ export async function sendTemplate(options: {
   subject: string;
   template: ReactElement;
   text: string;
+  replyTo?: string;
 }): Promise<void> {
   const html = await render(options.template);
   await sendEmail({
     to: options.to,
     subject: options.subject,
+    replyTo: options.replyTo,
     html,
     text: options.text,
   });

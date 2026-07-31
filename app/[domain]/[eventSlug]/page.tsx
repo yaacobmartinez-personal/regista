@@ -93,6 +93,7 @@ export default async function PublicEventPage({
             <RegisterForm
               tenantSlug={tenant.slug}
               eventSlug={event.slug}
+              organizationName={tenant.name}
               isFull={isFull}
               waitlistEnabled={event.waitlistEnabled}
             />

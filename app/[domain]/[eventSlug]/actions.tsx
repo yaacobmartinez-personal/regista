@@ -150,6 +150,15 @@ export async function register(
     const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
     const proto = rootDomain.startsWith("localhost") ? "http" : "https";
 
+    // The message tells attendees to reply to the organizer if they need their
+    // details changed or removed, so a reply has to actually reach one. Uses the
+    // longest-standing admin as the organization's contact.
+    const organizerContact = await prisma.membership.findFirst({
+      where: { tenantId: tenant.id, role: "ADMIN" },
+      orderBy: { createdAt: "asc" },
+      select: { user: { select: { email: true } } },
+    });
+
     const props = {
       attendeeName: name,
       eventTitle: event.title,
@@ -171,6 +180,7 @@ export async function register(
           : `You're registered for ${event.title}`,
         template: <EventRegistration {...props} />,
         text: eventRegistrationText(props),
+        replyTo: organizerContact?.user.email,
       });
     } catch {
       // Deliberately swallowed: the registration stands, and the confirmation

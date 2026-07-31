@@ -132,19 +132,28 @@ model Registration {
   @@index([eventId])
 }
 
+/// Accountability trail for access to registrant personal data.
+/// Holds identifiers only — never the personal data itself.
 model AuditLog {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   tenantId    String
   actorUserId String?
-  action      String // EXPORT_ATTENDEES, DELETE_REGISTRATION, ...
+  /// See AuditAction in lib/audit.ts for the values in use.
+  action      String
   targetType  String?
   targetId    String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// Restrict, not Cascade: a log that vanished with the organization it holds
+  /// accountable would be no use for answering questions afterwards. The
+  /// database refuses the delete, which also enforces the rule that an address
+  /// is only reclaimable when nothing has happened under it.
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  /// The record stays even if the acting account goes; it just loses attribution.
   actor  User?  @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
+  @@index([createdAt])
 }
 
 // Owner email verification at signup (and future flows).

@@ -13,6 +13,7 @@ import {
   releaseAbandonedTenant,
 } from "@/lib/tenant";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { pruneInBackground } from "@/lib/retention";
 import {
   createSecureToken,
   verificationExpiry,
@@ -92,6 +93,10 @@ export async function signup(
   if (!limit.ok) {
     return { error: "Too many attempts. Try again in a little while." };
   }
+
+  // No scheduler in this deployment, so housekeeping rides along with a routine
+  // write. Detached: it must never affect the signup itself.
+  pruneInBackground();
 
   const parsed = signupSchema.safeParse({
     organization: formData.get("organization"),

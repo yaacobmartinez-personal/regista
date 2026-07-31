@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { register } from "./actions";
 import type { RegisterState } from "./shared";
@@ -31,11 +32,14 @@ function Notice({
 export function RegisterForm({
   tenantSlug,
   eventSlug,
+  organizationName,
   isFull,
   waitlistEnabled,
 }: {
   tenantSlug: string;
   eventSlug: string;
+  /** Named in the notice, since the organization is the one holding the data. */
+  organizationName: string;
   isFull: boolean;
   waitlistEnabled: boolean;
 }) {
@@ -155,8 +159,15 @@ export function RegisterForm({
       </button>
 
       <p className="text-xs text-muted">
-        We collect your name and email only to manage your place at this event.
-        The organizer can remove your details on request.
+        {organizationName} collects your name and email only to manage your place
+        at this event, and can correct or remove them on request.{" "}
+        <Link
+          href="/privacy"
+          className="text-accent underline-offset-2 hover:underline"
+        >
+          How your details are used
+        </Link>
+        .
       </p>
     </form>
   );
