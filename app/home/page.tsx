@@ -1,4 +1,5 @@
 import { Logo } from "@/components/brand";
+import { appOrigin, marketingOrigin } from "@/lib/urls";
 import { ScrollProgress } from "@/components/motion/primitives";
 import { MarketingNav } from "@/components/marketing/nav";
 import { Hero } from "@/components/marketing/hero";
@@ -6,10 +7,8 @@ import { HowItWorks } from "@/components/marketing/how-it-works";
 import { Features, Trust, CallToAction } from "@/components/marketing/sections";
 
 export default function MarketingHome() {
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
-  const proto = rootDomain.startsWith("localhost") ? "http" : "https";
-  const loginUrl = `${proto}://app.${rootDomain}/login`;
-  const signupUrl = `${proto}://${rootDomain}/signup`;
+  const loginUrl = `${appOrigin()}/login`;
+  const signupUrl = `${marketingOrigin()}/signup`;
 
   return (
     <div className="flex min-h-screen flex-col">

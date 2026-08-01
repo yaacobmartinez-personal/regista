@@ -1,5 +1,6 @@
 import { requireMembership } from "@/lib/authz";
 import { supportedTimeZones } from "@/lib/time";
+import { tenantHost } from "@/lib/urls";
 import { EventForm } from "../event-form";
 
 export default async function NewEventPage({
@@ -9,7 +10,7 @@ export default async function NewEventPage({
 }) {
   const { slug } = await params;
   const ctx = await requireMembership(slug);
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
+
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-8">
@@ -20,7 +21,7 @@ export default async function NewEventPage({
       </p>
       <EventForm
         tenantSlug={ctx.tenant.slug}
-        publicHost={`${ctx.tenant.slug}.${rootDomain}`}
+        publicHost={tenantHost(ctx.tenant.slug)}
         timeZones={supportedTimeZones()}
       />
     </main>

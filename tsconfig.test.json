@@ -1,0 +1,21 @@
+{
+  // Compiles the import-free, pure modules to plain JS so `node --test` can run
+  // against them.
+  //
+  // Deliberately not Vitest or tsx: both drive esbuild, which crashes in this
+  // environment (see docs/DEVELOPMENT.md). tsc + node:test needs no extra
+  // dependency and uses the compiler the project already type-checks with.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": ".test-build",
+    "rootDir": ".",
+    "noEmit": false,
+    "declaration": false
+  },
+  "include": ["lib/time.ts", "lib/csv.ts", "lib/slug.ts"]
+}

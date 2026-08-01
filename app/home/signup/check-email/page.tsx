@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { Wordmark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { VERIFICATION_TTL_HOURS } from "@/lib/tokens";
 import { PENDING_EMAIL_COOKIE } from "../shared";
 import { ResendButton } from "./resend-button";
 
@@ -59,8 +60,7 @@ export default async function CheckEmailPage() {
           )}
         </p>
         <p className="mt-3 text-sm text-muted">
-          The link expires in 24 hours. Until it&apos;s confirmed, your
-          organization&apos;s pages stay offline.
+          {`The link expires in ${VERIFICATION_TTL_HOURS} hours. Until it's confirmed, your organization's pages stay offline.`}
         </p>
 
         <div className="mt-8 flex flex-wrap items-center gap-3">

@@ -8,6 +8,7 @@ import { registrationInputSchema } from "@/lib/events";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { sendTemplate } from "@/lib/email";
 import { formatEventWhen } from "@/lib/time";
+import { eventUrl } from "@/lib/urls";
 import {
   EventRegistration,
   eventRegistrationText,
@@ -147,8 +148,6 @@ export async function register(
   ) {
     const waitlisted = result.outcome === "waitlisted";
     const event = result.event;
-    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
-    const proto = rootDomain.startsWith("localhost") ? "http" : "https";
 
     // The message tells attendees to reply to the organizer if they need their
     // details changed or removed, so a reply has to actually reach one. Uses the
@@ -165,7 +164,7 @@ export async function register(
       // Always the event's own timezone, so the email agrees with the page.
       eventWhen: formatEventWhen(event.startsAt, event.endsAt, event.timezone),
       organizationName: tenant.name,
-      eventUrl: `${proto}://${tenant.slug}.${rootDomain}/${event.slug}`,
+      eventUrl: eventUrl(tenant.slug, event.slug),
       waitlisted,
     };
 
@@ -188,7 +187,8 @@ export async function register(
       console.error("Registration confirmation email failed to send.");
     }
 
-    revalidatePath(`/${tenantSlug}/${eventSlug}`);
+    // Server-resolved slug, not the one the form supplied.
+    revalidatePath(`/${tenant.slug}/${event.slug}`);
   }
 
   return { outcome: result.outcome };

@@ -1,13 +1,7 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
-import {
-  motion,
-  useScroll,
-  useSpring,
-  useTransform,
-  useReducedMotion,
-} from "motion/react";
+import { type ReactNode } from "react";
+import { motion, useScroll, useSpring, useReducedMotion } from "motion/react";
 
 /** Shared easing — a soft, confident ease-out used across the page. */
 export const EASE = [0.21, 0.47, 0.32, 0.98] as const;
@@ -113,34 +107,5 @@ export function RevealItem({
     >
       {children}
     </motion.div>
-  );
-}
-
-/** Moves a decorative layer at a different rate than the page. */
-export function Parallax({
-  children,
-  distance = 60,
-  className,
-}: {
-  children: ReactNode;
-  distance?: number;
-  className?: string;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start end", "end start"],
-  });
-  const y = useTransform(
-    scrollYProgress,
-    [0, 1],
-    reduce ? [0, 0] : [distance, -distance],
-  );
-
-  return (
-    <div ref={ref} className={className}>
-      <motion.div style={{ y }}>{children}</motion.div>
-    </div>
   );
 }

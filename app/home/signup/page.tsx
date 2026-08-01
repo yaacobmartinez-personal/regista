@@ -1,14 +1,14 @@
 import { SignupForm } from "./signup-form";
 import { Wordmark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { appOrigin, rootDomain } from "@/lib/urls";
 
 export const metadata = {
   title: "Create your organization — Regista",
 };
 
 export default function SignupPage() {
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
-  const proto = rootDomain.startsWith("localhost") ? "http" : "https";
+  const domain = rootDomain();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -18,7 +18,7 @@ export default function SignupPage() {
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <a
-              href={`${proto}://app.${rootDomain}/login`}
+              href={`${appOrigin()}/login`}
               className="rounded-lg border border-line-strong px-3 py-2 text-sm font-medium transition-colors hover:bg-panel"
             >
               Sign in
@@ -36,7 +36,7 @@ export default function SignupPage() {
           link to confirm.
         </p>
 
-        <SignupForm rootDomain={rootDomain} />
+        <SignupForm rootDomain={domain} />
       </main>
     </div>
   );

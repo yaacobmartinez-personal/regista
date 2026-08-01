@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { inspectVerification } from "@/lib/verification";
+import { VERIFICATION_TTL_HOURS } from "@/lib/tokens";
+import { rootDomain as configuredRootDomain } from "@/lib/urls";
 import { Logo, Wordmark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ConfirmPanel } from "./confirm-panel";
@@ -36,7 +38,7 @@ export default async function VerifyPage({
 }) {
   const { token } = await searchParams;
   const state = await inspectVerification(token);
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
+  const rootDomain = configuredRootDomain();
 
   if (state.kind === "invalid") {
     return (
@@ -45,8 +47,7 @@ export default async function VerifyPage({
           This link is no longer valid
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Verification links expire after 24 hours and can only be used once.
-          Start again and we&apos;ll send a fresh one.
+          {`Verification links expire after ${VERIFICATION_TTL_HOURS} hours and can only be used once. Start again and we'll send a fresh one.`}
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link

@@ -6,8 +6,27 @@ one finding disproved and dropped (see the end).
 
 Ordered by what would hurt most in production.
 
-**Status: P0 (1–9), P1 (10–17), P2 (18–25) and P3 (26–35) fixed and verified at
-runtime. P4 outstanding.**
+**Status: all findings addressed. P0 (1–9), P1 (10–17), P2 (18–25), P3 (26–35)
+and P4 (36–47) are done and verified.**
+
+P4 verification:
+
+- `pnpm test` — 19 unit tests pass, covering timezone conversion and DST gaps,
+  CSV injection escaping, and slug behaviour.
+- `pnpm test:db` — the capacity race now runs from a committed test rather than
+  memory: 5/5 confirmed with the lock, 17/5 without it, so the scenario is shown
+  to genuinely race.
+- Slug logic reduced from three copies to one import-free module both the browser
+  and server use.
+- Interactive elements without a focus style: 40 → 0, via a zero-specificity base
+  rule that component styles still override.
+- `NEXT_PUBLIC_ROOT_DOMAIN` read directly: 8 places → 1 (`lib/urls.ts`).
+- Removed: `Parallax`, `tokensMatch` (a constant-time compare with no caller),
+  `EventInput`, four scaffold SVGs, and the `tsx` dependency the docs forbid.
+
+One test caught an error in its own expectation rather than in the code —
+`Ünïcödé Çafé` slugifies to `ncd-af`, since accents are dropped rather than
+transliterated. Worth knowing, so it is asserted explicitly.
 
 P3 verification:
 

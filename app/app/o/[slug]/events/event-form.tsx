@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useActionState, useRef, useState } from "react";
+// The same function the server uses, so this preview can't promise a link the
+// user won't get.
+import { slugify as slugifyTitle } from "@/lib/slug";
 import { createEvent, updateEvent } from "./actions";
 import type { EventFormState } from "./shared";
 
@@ -18,15 +21,6 @@ export type EventFormValues = {
   waitlistEnabled: boolean;
 };
 
-function slugifyTitle(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 63);
-}
 
 const field =
   "rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-sm placeholder:text-faint focus-visible:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25";

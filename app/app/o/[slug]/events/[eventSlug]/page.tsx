@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireMembership } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 import { supportedTimeZones, utcToZonedInput } from "@/lib/time";
+import { eventUrl, tenantHost } from "@/lib/urls";
 import { EventForm } from "../event-form";
 import { deleteEvent, setEventStatus } from "../actions";
 
@@ -21,9 +22,7 @@ export default async function EditEventPage({
   });
   if (!event) notFound();
 
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
-  const proto = rootDomain.startsWith("localhost") ? "http" : "https";
-  const publicHost = `${ctx.tenant.slug}.${rootDomain}`;
+  const publicHost = tenantHost(ctx.tenant.slug);
   const confirmed = await prisma.registration.count({
     where: { tenantId: ctx.tenant.id, eventId: event.id, status: "CONFIRMED" },
   });
@@ -41,7 +40,7 @@ export default async function EditEventPage({
               <>
                 Live at{" "}
                 <a
-                  href={`${proto}://${publicHost}/${event.slug}`}
+                  href={eventUrl(ctx.tenant.slug, event.slug)}
                   target="_blank"
                   rel="noreferrer"
                   className="font-mono text-accent underline-offset-4 hover:underline"

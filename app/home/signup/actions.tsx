@@ -14,6 +14,7 @@ import {
 } from "@/lib/tenant";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { pruneInBackground } from "@/lib/retention";
+import { appOrigin, tenantHost } from "@/lib/urls";
 import {
   createSecureToken,
   verificationExpiry,
@@ -30,11 +31,6 @@ const signupSchema = z.object({
   password: z.string().min(8, "Use at least 8 characters."),
 });
 
-function appOrigin(): string {
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
-  const proto = rootDomain.startsWith("localhost") ? "http" : "https";
-  return `${proto}://app.${rootDomain}`;
-}
 
 async function sendVerification(opts: {
   email: string;
@@ -53,10 +49,9 @@ async function sendVerification(opts: {
     },
   });
 
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
   const props = {
     organizationName: opts.organization,
-    address: `${opts.slug}.${rootDomain}`,
+    address: tenantHost(opts.slug),
     verifyUrl: `${appOrigin()}/verify?token=${raw}`,
     expiryHours: VERIFICATION_TTL_HOURS,
   };

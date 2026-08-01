@@ -90,6 +90,9 @@ Password for all seeded organizers: `password123`
 | `pnpm db:studio` | Open Prisma Studio |
 | `pnpm db:reset` | Drop, re-migrate, and re-seed the database |
 | `pnpm db:generate` | Regenerate the Prisma client |
+| `pnpm db:prune` | Remove expired tokens and invitations (run on a schedule in production) |
+| `pnpm test` | Unit tests — no database needed |
+| `pnpm test:db` | Capacity race test — needs the database running |
 
 ## Project structure
 
@@ -119,8 +122,11 @@ docs/            Requirements, dev guide, product overview
 signup, events and public registration, attendee management, designed emails, and team
 members.
 
-Four independent audits were then run over the codebase. The findings and what has been
-fixed are tracked in [docs/AUDIT-FINDINGS.md](docs/AUDIT-FINDINGS.md): the security,
-correctness and accessibility batches are done; privacy and maintainability work remains.
-This is **not production-ready yet** — see the outstanding items there, and the sending-domain
-setup in the [developer guide](docs/DEVELOPMENT.md).
+Four independent audits were then run over the codebase — security, correctness, privacy
+and code quality — and every finding has been addressed. What each one was and how it was
+verified is in [docs/AUDIT-FINDINGS.md](docs/AUDIT-FINDINGS.md).
+
+Still needed before this could serve real people: a verified sending domain (nothing is
+delivered without it — see the [developer guide](docs/DEVELOPMENT.md)), data processing
+agreements with the email and hosting providers, and the deployment decisions listed in
+[docs/DATA-RETENTION.md](docs/DATA-RETENTION.md).

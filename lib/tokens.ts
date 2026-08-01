@@ -1,4 +1,4 @@
-import { randomBytes, createHash, timingSafeEqual } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 
 /** Hours a signup verification link stays valid. */
 export const VERIFICATION_TTL_HOURS = 24;
@@ -22,13 +22,10 @@ export function hashToken(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
 }
 
-/** Constant-time compare for two hex digests of equal length. */
-export function tokensMatch(a: string, b: string): boolean {
-  const bufA = Buffer.from(a, "hex");
-  const bufB = Buffer.from(b, "hex");
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
-}
+// A constant-time `tokensMatch` used to live here with no callers. Both token
+// flows look the value up by its unique hash rather than comparing digests, so
+// it was never on the path — and a security helper that isn't wired up reads as
+// a protection that exists when it doesn't.
 
 export function verificationExpiry(): Date {
   return new Date(Date.now() + VERIFICATION_TTL_HOURS * 60 * 60 * 1000);

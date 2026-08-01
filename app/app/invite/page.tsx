@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { ROLE_LABEL, ROLE_SUMMARY } from "@/lib/authz";
+import { INVITATION_TTL_HOURS } from "@/lib/tokens";
 import {
   findLiveInvitation,
   invitedUserHasAccount,
@@ -75,8 +76,7 @@ export default async function InvitePage({
           This invitation is no longer valid
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Invitations expire after a week and can only be used once. Ask whoever
-          invited you to send a new one.
+          {`Invitations expire after ${Math.round(INVITATION_TTL_HOURS / 24)} days and can only be used once. Ask whoever invited you to send a new one.`}
         </p>
         <div className="mt-8">
           <Link

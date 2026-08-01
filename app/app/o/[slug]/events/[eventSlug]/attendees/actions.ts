@@ -37,7 +37,9 @@ export async function toggleCheckIn(formData: FormData): Promise<void> {
     targetId: registrationId,
   });
 
-  revalidatePath(`/o/${tenantSlug}/events/${eventSlug}/attendees`);
+  // Route-tree path (the rewrite destination), and the tenant slug comes from
+  // the verified context rather than the form body.
+  revalidatePath(`/app/o/${ctx.tenant.slug}/events/${eventSlug}/attendees`);
 }
 
 /**
@@ -89,5 +91,7 @@ export async function eraseRegistration(formData: FormData): Promise<void> {
     targetId: registration.id,
   });
 
-  revalidatePath(`/o/${tenantSlug}/events/${eventSlug}/attendees`);
+  // Route-tree path (the rewrite destination), and the tenant slug comes from
+  // the verified context rather than the form body.
+  revalidatePath(`/app/o/${ctx.tenant.slug}/events/${eventSlug}/attendees`);
 }

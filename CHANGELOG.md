@@ -9,9 +9,39 @@ Nothing has been publicly released yet. Entries are grouped by build milestone
 
 ## [Unreleased]
 
-All six milestones are built and walked through. Remaining work is the
-maintainability findings (P4 in `docs/AUDIT-FINDINGS.md`), plus the verified
-sending domain needed before any real send.
+All six milestones are built and walked through, and every audit finding is
+addressed. Before a real launch: a verified sending domain, data processing
+agreements, and the deployment decisions listed in `docs/DATA-RETENTION.md`.
+
+### Added
+
+- **A test suite.** There wasn't one. It covers the things that fail silently or
+  matter most: timezone conversion including the hour that doesn't exist when
+  clocks go forward, the spreadsheet-formula escaping on exported guest lists,
+  and address generation. Run with `pnpm test`.
+- **The capacity check is now a committed test rather than something we ran
+  once.** It fires twenty simultaneous sign-ups at a five-place event, and also
+  runs the same scenario with the protection removed to prove the test would
+  actually catch a regression: five places held versus seventeen oversold.
+
+### Fixed
+
+- **Keyboard focus is now visible everywhere.** Around forty buttons and links
+  had no focus indicator at all, because the app turns off the browser default
+  and those had never been given a replacement.
+- Publishing, editing or closing an event now refreshes its public pages.
+  Closing registrations could previously leave a working sign-up form up.
+
+### Changed
+
+- The address shown while typing an organization name and the address actually
+  assigned now come from the same code. They were separate copies that could
+  drift, which would have meant the preview promising a link nobody got.
+- Link and time-limit wording is derived from the settings rather than typed out,
+  so changing "24 hours" in one place no longer leaves three pages saying the old
+  number.
+- Removed unused code, including a security helper that looked like it was
+  protecting something but had no callers.
 
 ### Privacy
 

@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { notFound } from "next/navigation";
 import { z } from "zod";
-import type { Prisma, Role } from "@prisma/client";
+import { Role, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireMembership, ROLE_LABEL, ROLE_SUMMARY } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
 import { rateLimit } from "@/lib/rate-limit";
+import { appOrigin } from "@/lib/urls";
 import { sendTemplate } from "@/lib/email";
 import { createSecureToken, invitationExpiry, INVITATION_TTL_HOURS } from "@/lib/tokens";
 import { TeamInvite, teamInviteText } from "@/emails/team-invite";
@@ -21,7 +22,9 @@ import type { InviteState } from "./shared";
 
 const inviteSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address."),
-  role: z.enum(["ADMIN", "STAFF"]),
+  // Taken from the schema rather than restated, so adding a role is a compile
+  // error at the places that need updating instead of a silent rejection here.
+  role: z.enum(Role),
 });
 
 /**
@@ -46,11 +49,6 @@ function headerSafe(value: string, fallback: string): string {
   return cleaned || fallback;
 }
 
-function appOrigin(): string {
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
-  const proto = rootDomain.startsWith("localhost") ? "http" : "https";
-  return `${proto}://app.${rootDomain}`;
-}
 
 /**
  * Apply a change to a membership only if it leaves at least one admin.
@@ -187,7 +185,7 @@ export async function inviteMember(
     targetId: invitation.id,
   });
 
-  revalidatePath(`/o/${tenantSlug}/team`);
+  revalidatePath(`/app/o/${ctx.tenant.slug}/team`);
   return { invitedEmail: email };
 }
 
@@ -209,7 +207,7 @@ export async function revokeInvitation(formData: FormData): Promise<void> {
     targetId: invitationId,
   });
 
-  revalidatePath(`/o/${tenantSlug}/team`);
+  revalidatePath(`/app/o/${ctx.tenant.slug}/team`);
 }
 
 export async function removeMember(formData: FormData): Promise<void> {
@@ -238,7 +236,7 @@ export async function removeMember(formData: FormData): Promise<void> {
 
   // Revalidate either way so a refused change re-renders the current state
   // rather than leaving the page looking as though it worked.
-  revalidatePath(`/o/${tenantSlug}/team`);
+  revalidatePath(`/app/o/${ctx.tenant.slug}/team`);
 }
 
 export async function changeRole(formData: FormData): Promise<void> {
@@ -269,5 +267,5 @@ export async function changeRole(formData: FormData): Promise<void> {
     });
   }
 
-  revalidatePath(`/o/${tenantSlug}/team`);
+  revalidatePath(`/app/o/${ctx.tenant.slug}/team`);
 }

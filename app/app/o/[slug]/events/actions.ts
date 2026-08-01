@@ -15,6 +15,22 @@ import type { EventFormState } from "./shared";
  * scoped by that tenant id — never by event id alone.
  */
 
+/**
+ * Refresh everywhere an event is visible.
+ *
+ * `revalidatePath` takes route-tree paths, i.e. the rewrite *destination* — so
+ * the dashboard is `/app/o/...`, not the `/o/...` you see in the address bar.
+ * Passing the visible path silently targeted a different route.
+ *
+ * Publishing or editing also changes the public pages, which were never being
+ * refreshed at all: closing registrations left a working sign-up form up.
+ */
+function revalidateEventSurfaces(tenantSlug: string, eventSlug?: string) {
+  revalidatePath(`/app/o/${tenantSlug}`);
+  revalidatePath(`/${tenantSlug}`);
+  if (eventSlug) revalidatePath(`/${tenantSlug}/${eventSlug}`);
+}
+
 function parseEventForm(formData: FormData) {
   return eventInputSchema.safeParse({
     title: formData.get("title"),
@@ -69,7 +85,7 @@ export async function createEvent(
     },
   });
 
-  revalidatePath(`/o/${ctx.tenant.slug}`);
+  revalidateEventSurfaces(ctx.tenant.slug, slug);
   redirect(`/o/${ctx.tenant.slug}`);
 }
 
@@ -131,7 +147,7 @@ export async function updateEvent(
     await promoteFromWaitlist(tx, existing.id);
   });
 
-  revalidatePath(`/o/${ctx.tenant.slug}`);
+  revalidateEventSurfaces(ctx.tenant.slug, slug);
   redirect(`/o/${ctx.tenant.slug}`);
 }
 
@@ -146,13 +162,13 @@ export async function setEventStatus(formData: FormData): Promise<void> {
     return;
   }
 
-  const updated = await prisma.event.updateMany({
+  const updated = await prisma.event.update({
     where: { id: eventId, tenantId: ctx.tenant.id },
     data: { status: requested },
+    select: { slug: true },
   });
-  if (updated.count === 0) notFound();
 
-  revalidatePath(`/o/${ctx.tenant.slug}`);
+  revalidateEventSurfaces(ctx.tenant.slug, updated.slug);
 }
 
 export async function deleteEvent(formData: FormData): Promise<void> {
@@ -162,7 +178,7 @@ export async function deleteEvent(formData: FormData): Promise<void> {
 
   const event = await prisma.event.findFirst({
     where: { id: eventId, tenantId: ctx.tenant.id },
-    select: { id: true, _count: { select: { registrations: true } } },
+    select: { id: true, slug: true, _count: { select: { registrations: true } } },
   });
   if (!event) notFound();
 
@@ -181,6 +197,6 @@ export async function deleteEvent(formData: FormData): Promise<void> {
     where: { id: event.id, tenantId: ctx.tenant.id },
   });
 
-  revalidatePath(`/o/${ctx.tenant.slug}`);
+  revalidateEventSurfaces(ctx.tenant.slug, event.slug);
   redirect(`/o/${ctx.tenant.slug}`);
 }

@@ -2,17 +2,10 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { isValidTimeZone, wallClockExists, zonedInputToUtc } from "@/lib/time";
+import { slugify } from "@/lib/slug";
 
-/** Turn a title into a URL segment. Mirrors the client-side preview. */
-export function slugifyTitle(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 63);
-}
+/** Turn a title into a URL segment. Same code the client preview runs. */
+export const slugifyTitle = slugify;
 
 /**
  * Find a slug free within this tenant, appending -2, -3, … on collision.
@@ -133,7 +126,6 @@ export const eventInputSchema = z
     path: ["endsAt"],
   });
 
-export type EventInput = z.infer<typeof eventInputSchema>;
 
 /**
  * Move the longest-waiting people up when an event gains room.

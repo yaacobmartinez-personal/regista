@@ -1,55 +1,10 @@
 import { prisma } from "@/lib/db";
 import { VERIFICATION_TTL_HOURS } from "@/lib/tokens";
 
-/**
- * Names that must never resolve to a tenant.
- *
- * The first group is load-bearing: these are the top-level route folders, so a
- * tenant with one of these slugs would have its subdomain rewritten into a
- * first-party surface. Claiming `home`, for instance, would serve the marketing
- * site and signup form from what looks like a customer's address, while that
- * tenant's own pages became unreachable. Keep in step with the folders in app/.
- */
-const ROUTE_GROUP_NAMES = ["home", "app", "api"] as const;
-
-/** The rest are reserved by convention: impersonation risk or future use. */
-const CONVENTIONALLY_RESERVED = [
-  "www",
-  "admin",
-  "mail",
-  "smtp",
-  "imap",
-  "support",
-  "login",
-  "signup",
-  "auth",
-  "static",
-  "assets",
-  "cdn",
-  "help",
-  "status",
-  "billing",
-  "dashboard",
-  "account",
-  "security",
-  "internal",
-] as const;
-
-const RESERVED_SUBDOMAINS = new Set<string>([
-  ...ROUTE_GROUP_NAMES,
-  ...CONVENTIONALLY_RESERVED,
-]);
-
-/** True if a slug is syntactically valid AND not reserved. */
-export function isUsableSlug(slug: string): boolean {
-  if (RESERVED_SUBDOMAINS.has(slug)) return false;
-  // 3–63 chars, lowercase alphanumeric + internal hyphens.
-  return /^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$/.test(slug);
-}
-
-export function isReservedSubdomain(slug: string): boolean {
-  return RESERVED_SUBDOMAINS.has(slug);
-}
+// Slug rules live in lib/slug.ts, which has no imports so the browser can run
+// exactly the same code when previewing an address as the server does when
+// deciding whether it is allowed.
+export { isReservedSubdomain, isUsableSlug, slugify } from "@/lib/slug";
 
 /**
  * Extract the tenant subdomain from a host header, relative to the configured

@@ -1,21 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+// Shared with the server, so the address previewed here is the one applied.
+import { slugify } from "@/lib/slug";
 import { checkSlug, signup } from "./actions";
 import type { SignupState } from "./shared";
 
 type SlugStatus = "idle" | "checking" | "available" | "taken" | "reserved" | "invalid";
 
-/** Derive a reasonable address from the organization name as the user types. */
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 63);
-}
 
 const fieldClass =
   "rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-sm placeholder:text-faint focus-visible:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25";

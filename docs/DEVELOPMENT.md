@@ -178,9 +178,21 @@ tenants (`acme`, `beta`) so you can test isolation. See the README for login det
   (requires driver-adapters + a `prisma.config.ts`). We use the classic
   `url = env("DATABASE_URL")` setup on `prisma@^6` / `@prisma/client@^6`. Only upgrade
   deliberately, migrating the config as part of that work.
-- **`tsx` is broken in this environment** (esbuild `TransformError` / native crash). Do not
-  run TypeScript scripts with `tsx`. The seed is plain Node ESM (`seed.mjs`, run with
-  `node`). Prefer `.mjs` for one-off scripts.
+- **`tsx` is broken in this environment** (esbuild `TransformError` / native crash), and the
+  dependency has been removed so nobody reaches for it. Anything esbuild-based — Vitest
+  included — will hit the same wall. Scripts are plain Node ESM (`prisma/seed.mjs`,
+  `prisma/prune.mjs`); tests use `tsc` + `node:test` (§8k).
+- **Slug rules live in [`lib/slug.ts`](../lib/slug.ts), which must stay import-free** so the
+  browser and the server run the same code — the client previews the address, the server
+  decides it, and three separate copies meant the preview could lie. It is also what makes
+  the module unit-testable.
+- **Shared class strings are in [`components/ui.ts`](../components/ui.ts)**, and
+  `app/globals.css` gives every interactive element a zero-specificity focus outline. The
+  app suppresses the browser default in places, so anything that forgot to add a ring had no
+  visible focus at all — about forty elements were in that state.
+- **URLs come from [`lib/urls.ts`](../lib/urls.ts)**, not from re-deriving the root domain
+  and guessing the scheme inline. That guess was written out eight times and was wrong for
+  `127.0.0.1` and `.local` hosts.
 - **Routing file is `proxy.ts`, not `middleware.ts`** (Next 16 convention). Keep it
   edge-safe — no DB/auth imports.
 - **A `"use server"` module may only export async functions.** Exporting a `const` (or
@@ -416,6 +428,44 @@ The palette lives in `app/globals.css`: values in `@theme` for light, overridden
   is the only channel offered — without it the stated route did not exist.
 - **Security headers** live in [`next.config.ts`](../next.config.ts). `Referrer-Policy` is
   load-bearing, not decoration: it keeps tokenised links out of the `Referer` header.
+
+## 8k. Tests
+
+```bash
+pnpm test      # unit tests — no database needed
+pnpm test:db   # capacity race — needs pnpm db:up first
+```
+
+**Why this setup and not Vitest.** Vitest and `tsx` both drive esbuild, which crashes in
+this environment (§8, and the troubleshooting table). `tsc` and `node:test` are already
+available and need no new dependency, so `pnpm test` compiles the pure modules with the
+same compiler the project type-checks with and runs `node --test` against the output.
+`tsconfig.test.json` lists what gets compiled.
+
+The consequence: **only import-free modules are unit-testable this way** — `lib/time.ts`,
+`lib/csv.ts`, `lib/slug.ts`. Anything importing Prisma or a path alias will not compile
+under that config. That constraint is part of why `lib/slug.ts` exists as its own module.
+
+What is covered, and why these:
+
+- **`lib/time.ts`** — the most intricate logic here, and it fails silently: a wrong offset
+  just puts the event at the wrong time for everyone. Covers the offset conversions,
+  round-tripping across half- and quarter-hour zones, and the spring-forward gaps that were
+  previously accepted and shifted.
+- **`lib/csv.ts`** — a security control on attacker-controlled input. Covers each formula
+  trigger, quoting, and the case needing both treatments in the right order.
+- **`lib/slug.ts`** — the browser previews the address, the server decides it. Covers the
+  shared behaviour both sides rely on, and the reserved names that would otherwise shadow a
+  first-party route.
+- **Capacity race** (`pnpm test:db`) — overselling is the worst outcome the product can
+  produce, and the row lock is the kind of line a refactor removes as redundant. It runs
+  **with and without the lock**: a "with lock" run alone can pass vacuously if the scenario
+  never actually races, so the unlocked control has to oversell for the result to mean
+  anything. Re-run this after touching that transaction.
+
+Not covered: anything needing Prisma, React rendering, or a browser. Those have been
+verified by hand and the evidence is in [AUDIT-FINDINGS.md](AUDIT-FINDINGS.md), but they are
+not regression-protected.
 
 ## 9. Security & privacy (build-time requirements)
 
