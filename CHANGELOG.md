@@ -46,6 +46,9 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
   change makes promotion automatic, that test fails rather than quietly changing
   who gets into events. Run with `pnpm test:db`.
 
+- **A roadmap** ([docs/ROADMAP.md](docs/ROADMAP.md)) sequencing the next phases:
+  QR check-in next, then going online (with wildcard-DNS options), then the
+  build-out of a sellable paid tier. Grounded in a scan of a comparable platform.
 - **A user guide** ([docs/USER-GUIDE.md](docs/USER-GUIDE.md)) covering the app
   from an operator's chair: creating an organization, the event lifecycle,
   managing attendees and the team, and what attendees themselves experience —

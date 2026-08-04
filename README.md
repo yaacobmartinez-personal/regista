@@ -7,8 +7,9 @@ manage attendees and invite teammates; registrants get email confirmations.
 > **New here?** Read the plain-language [product overview](docs/business-explainer.html),
 > the [requirements](docs/REQUIREMENTS.md), and the [developer guide](docs/DEVELOPMENT.md).
 > To learn how to *use* the app — signing up, running events, managing attendees —
-> see the [user guide](docs/USER-GUIDE.md). Recent changes and known gaps live in
-> the [changelog](CHANGELOG.md).
+> see the [user guide](docs/USER-GUIDE.md). Where the product goes next is in the
+> [roadmap](docs/ROADMAP.md). Recent changes and known gaps live in the
+> [changelog](CHANGELOG.md).
 
 ## Tech stack
 
