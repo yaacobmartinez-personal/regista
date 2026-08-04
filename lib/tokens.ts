@@ -22,6 +22,18 @@ export function hashToken(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
 }
 
+/**
+ * A check-in token for an attendee's QR ticket.
+ *
+ * Unlike the tokens above this is stored **in the clear**, so there is no hash:
+ * it only identifies a registration, and marking someone present is authorised
+ * by a staff session, not by holding this value. Kept short (128-bit) so the QR
+ * stays low-density and easy to scan, and still far beyond guessing.
+ */
+export function createCheckInToken(): string {
+  return randomBytes(16).toString("base64url");
+}
+
 // A constant-time `tokensMatch` used to live here with no callers. Both token
 // flows look the value up by its unique hash rather than comparing digests, so
 // it was never on the path — and a security helper that isn't wired up reads as

@@ -30,6 +30,8 @@ export type ManagedRegistration = {
   timezone: string;
   /** True once the event has begun — past that, cancelling changes nothing real. */
   started: boolean;
+  /** Ticket token for the check-in QR; null once erased. */
+  checkInToken: string | null;
 };
 
 /**
@@ -51,6 +53,7 @@ export async function inspectRegistration(
       status: true,
       createdAt: true,
       anonymizedAt: true,
+      checkInToken: true,
       tenant: { select: { id: true, name: true, slug: true, status: true } },
       event: {
         select: {
@@ -85,6 +88,7 @@ export async function inspectRegistration(
     endsAt: registration.event.endsAt,
     timezone: registration.event.timezone,
     started: registration.event.startsAt.getTime() <= Date.now(),
+    checkInToken: registration.checkInToken,
   };
 }
 

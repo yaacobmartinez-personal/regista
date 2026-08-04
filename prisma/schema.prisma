@@ -125,6 +125,13 @@ model Registration {
   /// SHA-256 of the value emailed to the registrant, letting them manage their
   /// own place without an account. Cleared on erasure along with the rest.
   manageToken  String?            @unique
+  /// Value encoded in the attendee's QR ticket for check-in. Stored in the clear
+  /// (unlike manageToken): it only *identifies* a registration, and the check-in
+  /// action is separately gated by a staff session and tenant scope — so it is
+  /// not a credential, and the manage page must read it back to draw the QR.
+  /// Random and unique so a ticket can't be forged or enumerated; cleared on
+  /// erasure so a forgotten person's ticket stops resolving.
+  checkInToken String?            @unique
   createdAt    DateTime           @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)

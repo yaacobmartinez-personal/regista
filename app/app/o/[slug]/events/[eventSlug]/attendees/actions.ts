@@ -146,6 +146,8 @@ export async function eraseRegistration(formData: FormData): Promise<void> {
       // alive, it would keep opening a page about a person who asked to be
       // forgotten.
       manageToken: null,
+      // Same for the QR ticket — an erased person should not resolve at a door.
+      checkInToken: null,
       anonymizedAt: new Date(),
     },
   });

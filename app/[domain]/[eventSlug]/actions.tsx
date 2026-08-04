@@ -8,7 +8,7 @@ import { registrationInputSchema } from "@/lib/events";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { sendTemplate } from "@/lib/email";
 import { formatEventWhen } from "@/lib/time";
-import { createSecureToken } from "@/lib/tokens";
+import { createSecureToken, createCheckInToken } from "@/lib/tokens";
 import { eventUrl, manageRegistrationUrl } from "@/lib/urls";
 import {
   EventRegistration,
@@ -65,6 +65,7 @@ export async function register(
   // Minted outside the transaction so a retry after contention doesn't reuse a
   // value that a rolled-back attempt already wrote.
   const manage = createSecureToken();
+  const checkInToken = createCheckInToken();
 
   let result: { outcome: RegisterState["outcome"]; event?: EventSummary };
   try {
@@ -123,6 +124,8 @@ export async function register(
             name,
             status,
             manageToken: manage.hash,
+            // A fresh ticket for the fresh registration.
+            checkInToken,
             // Back of the queue. They left it; rejoining ahead of people who
             // waited through would not be the fair reading of "first come".
             createdAt: new Date(),
@@ -137,6 +140,7 @@ export async function register(
             email,
             status,
             manageToken: manage.hash,
+            checkInToken,
           },
         });
       }

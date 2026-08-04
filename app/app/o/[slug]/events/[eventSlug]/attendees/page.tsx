@@ -141,12 +141,20 @@ export default async function AttendeesPage({
             {event.capacity ? ` of ${event.capacity}` : ""} · {checkedInCount} checked in
           </p>
         </div>
-        <a
-          href={`${basePath}/export`}
-          className="rounded-lg border border-line-strong px-4 py-2 text-sm font-medium transition-colors hover:bg-panel"
-        >
-          Export CSV
-        </a>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/o/${ctx.tenant.slug}/events/${event.slug}/checkin`}
+            className="rounded-lg border border-line-strong px-4 py-2 text-sm font-medium transition-colors hover:bg-panel"
+          >
+            Scan check-in
+          </Link>
+          <a
+            href={`${basePath}/export`}
+            className="rounded-lg border border-line-strong px-4 py-2 text-sm font-medium transition-colors hover:bg-panel"
+          >
+            Export CSV
+          </a>
+        </div>
       </div>
 
       <form action={applyAttendeeFilter} className="mt-6 flex flex-wrap items-center gap-2">

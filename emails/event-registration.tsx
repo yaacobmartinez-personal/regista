@@ -90,9 +90,11 @@ export function EventRegistration({
       </Text>
 
       <Text style={{ ...paragraph, color: brand.muted, fontSize: "13px" }}>
-        Use that link to give up your place if you can no longer come. Keep it to
-        yourself — anyone who has it can cancel for you. For anything else, reply
-        to {organizationName}; they manage this guest list.
+        {waitlisted
+          ? "Use that link to give up your place if you can no longer come. "
+          : "That page also holds your check-in code for the day — show it at the door. Use the link to give up your place if you can no longer come. "}
+        Keep it to yourself — anyone who has it can cancel for you. For anything
+        else, reply to {organizationName}; they manage this guest list.
       </Text>
     </EmailLayout>
   );
@@ -123,8 +125,10 @@ export function eventRegistrationText({
     ``,
     `Your place: ${manageUrl}`,
     ``,
-    `Use that link to give up your place if you can no longer come. Keep it to`,
-    `yourself — anyone who has it can cancel for you. For anything else, reply to`,
-    `${organizationName}; they manage this guest list.`,
+    waitlisted
+      ? `Use that link to give up your place if you can no longer come.`
+      : `That page also holds your check-in code for the day — show it at the door.\nUse the link to give up your place if you can no longer come.`,
+    `Keep it to yourself — anyone who has it can cancel for you. For anything else,`,
+    `reply to ${organizationName}; they manage this guest list.`,
   ].join("\n");
 }

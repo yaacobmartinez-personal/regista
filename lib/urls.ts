@@ -59,3 +59,13 @@ export function manageRegistrationUrl(
 ): string {
   return `${eventUrl(tenantSlug, eventSlug)}/manage?token=${encodeURIComponent(rawToken)}`;
 }
+
+/**
+ * The URL encoded in an attendee's QR ticket. It lives on the dashboard host, so
+ * scanning it with a phone camera opens the check-in page in the staff member's
+ * signed-in browser. The in-app scanner reads the same URL and pulls `c` out of
+ * it, so one code serves both ways in.
+ */
+export function checkInUrl(rawToken: string): string {
+  return `${appOrigin()}/checkin?c=${encodeURIComponent(rawToken)}`;
+}

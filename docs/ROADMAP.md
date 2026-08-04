@@ -39,7 +39,7 @@ complete enough to trust.
 | Phase | Theme | Why now | Rough size |
 |---|---|---|---|
 | **A** | Core platform + self-service | ✅ Done | — |
-| **B** | **QR check-in** | Completes the day-of story; asked for; no payments needed | Small–medium |
+| **B** | **QR check-in** | ✅ Done | Small–medium |
 | **C** | Go online | Real users need a real deployment | Medium (mostly ops) |
 | **D** | Sellable Premium tier | The features that justify a paid plan | Large |
 | **E** | Custom tier | Enterprise/branding asks | Medium–large |
@@ -51,7 +51,13 @@ paint them into a corner.
 
 ---
 
-## Phase B (next) — QR check-in
+## Phase B ✅ — QR check-in
+
+**Built.** Ships as specified below: a `checkInToken` on each registration, the
+QR on the registrant's manage page and a pointer to it in the confirmation email,
+an in-app camera scanner (with manual entry), and a native-camera URL landing —
+both routes gated by staff membership and safe against prefetch. Covered by
+`tests/checkin.integration.mjs`.
 
 **Goal.** Turn the door into a queue that moves: a staff member points a phone
 at each attendee's code and marks them present, with instant, unmistakable

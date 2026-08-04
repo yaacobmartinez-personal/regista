@@ -15,7 +15,7 @@
     "db:reset": "prisma migrate reset",
     "db:prune": "node prisma/prune.mjs",
     "test": "tsc -p tsconfig.test.json && node -e \"require('fs').writeFileSync('.test-build/package.json','{\\\"type\\\":\\\"module\\\"}')\" && node --test tests/",
-    "test:db": "node tests/capacity-race.integration.mjs && node tests/registration-lifecycle.integration.mjs"
+    "test:db": "node tests/capacity-race.integration.mjs && node tests/registration-lifecycle.integration.mjs && node tests/checkin.integration.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"
@@ -25,9 +25,11 @@
     "@prisma/client": "^6.19.3",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",
+    "@zxing/browser": "^0.2.1",
     "motion": "^12.42.2",
     "next": "16.2.12",
     "next-auth": "5.0.0-beta.32",
+    "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "zod": "^4.4.3"
@@ -35,6 +37,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

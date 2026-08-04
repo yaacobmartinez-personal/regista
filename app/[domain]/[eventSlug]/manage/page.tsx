@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { inspectRegistration } from "@/lib/registrations";
 import { formatEventWhen } from "@/lib/time";
+import { checkInUrl } from "@/lib/urls";
+import { qrSvg } from "@/lib/qr";
 import { Logo } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonSecondary } from "@/components/ui";
@@ -99,6 +101,14 @@ export default async function ManageRegistrationPage({
       ? "On the waitlist"
       : "Registered";
 
+  // A ticket only makes sense for a confirmed place that hasn't been given up.
+  // Waitlisted people have nothing to check in for yet; cancelled ones nothing at
+  // all. `checkInToken` is only null on an erased record, which never reaches here.
+  const ticketSvg =
+    registration.status === "CONFIRMED" && registration.checkInToken
+      ? await qrSvg(checkInUrl(registration.checkInToken))
+      : null;
+
   return (
     <Shell organizationName={registration.tenantName}>
       <p className="font-mono text-xs uppercase tracking-widest text-faint">
@@ -133,6 +143,22 @@ export default async function ManageRegistrationPage({
           <dd className="font-medium">{registration.tenantName}</dd>
         </div>
       </dl>
+
+      {ticketSvg ? (
+        <div className="mt-6 flex flex-col items-center rounded-xl border border-line bg-surface px-5 py-6 text-center">
+          <p className="text-sm font-medium">Your check-in code</p>
+          <p className="mt-1 text-sm text-muted">
+            Show this at the door — a member of {registration.tenantName} will
+            scan it to check you in.
+          </p>
+          <div
+            className="mt-4 h-44 w-44 [&>svg]:h-full [&>svg]:w-full"
+            aria-label="Your check-in QR code"
+            role="img"
+            dangerouslySetInnerHTML={{ __html: ticketSvg }}
+          />
+        </div>
+      ) : null}
 
       <div className="mt-6">
         {cancelled ? (

@@ -143,7 +143,18 @@ up in a browser history or a shared link.
 
 ### Check-in
 
-Use **Check in** on the day to mark who's arrived; **Undo check-in** reverses it.
+Two ways to mark who's arrived:
+
+- **Scan their code.** Open **Scan check-in** from the attendee list (or an
+  event) to turn your phone into a scanner — point it at each attendee's QR code
+  and they're marked present instantly, with clear feedback (a green "checked
+  in", an amber "already checked in", a red "wrong event"). Attendees carry their
+  code on their registration page (see §7); you can also paste a code by hand.
+  Attendees can equally scan their own QR with their phone's camera, which opens
+  the check-in page in your dashboard — either way works.
+- **By hand.** In the attendee list, **Check in** marks someone present and
+  **Undo check-in** reverses it.
+
 Check-in times are recorded in the audit log, since they assert someone was
 somewhere at a time.
 
@@ -213,6 +224,10 @@ After registering they get a confirmation with the event details and a **private
 link to their own place**. That link is the key to managing their registration —
 they don't need an account. It's worth keeping to themselves: anyone who has it
 can cancel on their behalf, and the email says so.
+
+That page also shows their **check-in code** — a QR to show at the door, which a
+staff member scans to mark them present (see §5). No printing needed; a phone
+screen is enough.
 
 ### Cancelling
 

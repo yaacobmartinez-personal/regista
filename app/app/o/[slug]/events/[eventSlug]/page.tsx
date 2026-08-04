@@ -66,6 +66,14 @@ export default async function EditEventPage({
           >
             Attendees
           </Link>
+          {event.status === "PUBLISHED" ? (
+            <Link
+              href={`/o/${ctx.tenant.slug}/events/${event.slug}/checkin`}
+              className="rounded-lg border border-line-strong px-3 py-2 text-sm font-medium transition-colors hover:bg-panel"
+            >
+              Check in
+            </Link>
+          ) : null}
           <form action={setEventStatus}>
             <input type="hidden" name="tenantSlug" value={ctx.tenant.slug} />
             <input type="hidden" name="eventId" value={event.id} />

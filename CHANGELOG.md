@@ -16,6 +16,16 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
 
 ### Added
 
+- **QR check-in.** Every registration now carries a check-in code. Attendees find
+  a QR on their registration page (the one their confirmation email links to);
+  staff open **Scan check-in** from an event to turn a phone into a scanner —
+  point it at each code and the person is marked present at once, with plain
+  feedback for the awkward cases (already checked in, wrong event, a cancelled
+  place, not recognised). It also works the other way: an attendee can scan their
+  own QR with a phone camera, which opens the check-in page in a signed-in staff
+  browser. Marking present only ever happens on a deliberate action, never on a
+  page load, so a link preview can't check anyone in. The code is cleared when a
+  registrant is erased, and check-ins are recorded in the audit log as before.
 - **Attendees can now give up their place themselves.** Every confirmation email
   carries a private link to the person's own registration, where they can see
   what they signed up for and cancel if they can't come. No account, no password
