@@ -208,7 +208,8 @@ Already enumerated when we discussed hosting; the short form:
 - Schedule `pnpm db:prune` (token/invite cleanup).
 - Non-code, owner's: DPAs with Resend/host/DB; EU-vs-US data-residency choice.
 
-A dedicated `docs/DEPLOYMENT.md` runbook is worth writing when we commit to a host.
+The step-by-step runbook — free-tier stack included — is in
+[DEPLOYMENT.md](DEPLOYMENT.md).
 
 ---
 

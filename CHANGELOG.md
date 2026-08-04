@@ -56,6 +56,10 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
   change makes promotion automatic, that test fails rather than quietly changing
   who gets into events. Run with `pnpm test:db`.
 
+- **A deployment runbook** ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)) for going
+  online on free tiers — Cloudflare for the wildcard, Neon for Postgres, Resend
+  for email, a container host for the app — with the order of operations and the
+  code prep each step needs.
 - **A roadmap** ([docs/ROADMAP.md](docs/ROADMAP.md)) sequencing the next phases:
   QR check-in next, then going online (with wildcard-DNS options), then the
   build-out of a sellable paid tier. Grounded in a scan of a comparable platform.
