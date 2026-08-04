@@ -46,6 +46,10 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
   change makes promotion automatic, that test fails rather than quietly changing
   who gets into events. Run with `pnpm test:db`.
 
+- **A user guide** ([docs/USER-GUIDE.md](docs/USER-GUIDE.md)) covering the app
+  from an operator's chair: creating an organization, the event lifecycle,
+  managing attendees and the team, and what attendees themselves experience —
+  registering, their confirmation link, and cancelling. Linked from the README.
 - **A test suite.** There wasn't one. It covers the things that fail silently or
   matter most: timezone conversion including the hour that doesn't exist when
   clocks go forward, the spreadsheet-formula escaping on exported guest lists,
