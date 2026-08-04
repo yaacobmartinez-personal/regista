@@ -162,7 +162,7 @@ export function RegisterForm({
         {organizationName} collects your name and email only to manage your place
         at this event, and can correct or remove them on request.{" "}
         <Link
-          href="/privacy"
+          href={`/${tenantSlug}/privacy`}
           className="text-accent underline-offset-2 hover:underline"
         >
           How your details are used

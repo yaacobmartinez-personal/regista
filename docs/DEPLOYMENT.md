@@ -13,9 +13,12 @@ runbook for Phase C in the [roadmap](ROADMAP.md).
 
 Grounded in the code, so we pick services that can actually run it:
 
-- **Subdomain-multitenant** — every request is routed by `Host` in
-  [proxy.ts](../proxy.ts), so we need **wildcard DNS + wildcard TLS** for
-  `*.yourdomain`. This is the one hard requirement.
+- **Two hostnames, no wildcard.** Tenants live on a **path** (`yourdomain/acme`),
+  and the dashboard on one fixed `app.yourdomain` — see [proxy.ts](../proxy.ts).
+  So all you need in DNS is the apex and one `app.` record, each with an ordinary
+  certificate. **No wildcard DNS or TLS**, which is what makes this deployable on
+  any host. (Keeping the dashboard on its own subdomain is deliberate: the session
+  cookie is host-only for `app.`, so it is never sent to a tenant's public pages.)
 - **A Node runtime** — not edge: it uses Prisma and the native `@node-rs/argon2`.
 - **A persistent server is preferable** — the rate limiter is in-memory, so one
   long-running process is better than many serverless instances.
@@ -28,20 +31,21 @@ Grounded in the code, so we pick services that can actually run it:
 
 | Piece | Service | Free tier (verify at signup) | Caveat |
 |---|---|---|---|
-| Domain | Cloudflare Registrar (or any) | ~$10/yr — **not free** | Required for subdomains and email |
-| DNS + wildcard TLS | **Cloudflare** | Free | Universal SSL covers the apex + first-level `*.yourdomain` — exactly what we use |
+| Domain | Cloudflare Registrar (or any) | ~$10/yr — **not free** | Required for the app address and email |
+| DNS + TLS | The app host, or **Cloudflare** | Free | Just the apex + one `app.` record, ordinary certs — **no wildcard** |
 | Database | **Neon** | Free: ~0.5 GB, autosuspends when idle | Brief cold start on wake; use the pooled URL for the app, the direct URL for migrations |
 | App host | **Fly.io** (rec.) or **Render** | Small always-on machine / free web service | Render free **sleeps after 15 min idle** (~30 s cold start); Fly runs a tiny machine |
-| Email | **Resend** | ~3,000/mo, 100/day | Needs a verified domain (DNS records, added in Cloudflare) |
+| Email | **Resend** | ~3,000/mo, 100/day | Needs a verified domain (DNS records) |
 
 **Net cost: ~$10/yr for the domain.** Everything else is free at low volume.
 
 ### Why this shape
-Cloudflare in front is what makes the wildcard painless: a single `*` DNS record,
-and its free certificate already covers `*.yourdomain`, so the app host never has
-to issue a wildcard cert. Behind it, a container host (Fly/Render) runs the app
-the same way it runs locally — one Node process — which keeps native modules and
-the in-memory rate limiter working without serverless workarounds.
+Path-based tenancy means there is no wildcard to solve: the app answers on the
+apex and one `app.` subdomain, both of which any host (or Cloudflare) can issue an
+ordinary certificate for. A container host (Fly/Render) runs the app the same way
+it runs locally — one Node process — which keeps native modules and the in-memory
+rate limiter working without serverless workarounds. Cloudflare in front is still
+a nice-to-have (caching, DDoS protection), but no longer required to solve DNS.
 
 ---
 
@@ -53,9 +57,9 @@ accounts or enter credentials. Steps marked **(me)** are code/config I prepare.
 
 1. **Domain (you).** Buy one (Cloudflare Registrar sells at cost). This unlocks
    both subdomains and email.
-2. **Cloudflare (you).** Add the domain, point its nameservers, turn on Universal
-   SSL. Add a proxied `*` (wildcard) DNS record and an apex record — both will
-   point at the app host once it exists.
+2. **DNS (you).** Two records only — the **apex** and one **`app.`** — both
+   pointing at the app host once it exists. No wildcard. This can be your host's
+   own DNS or Cloudflare; either issues ordinary certs for the two names.
 3. **Database — Neon (you).** Create a project; copy the **pooled** and **direct**
    connection strings.
 4. **App prep (me).** Standalone build output, a Dockerfile, NextAuth `trustHost`,
@@ -65,8 +69,8 @@ accounts or enter credentials. Steps marked **(me)** are code/config I prepare.
    account.
 6. **Email — Resend (you).** Verify the domain (add the DNS records it gives you
    in Cloudflare), copy the API key.
-7. **Wire it up (you + me).** Point the Cloudflare `*` and apex records at the app
-   host, set `NEXT_PUBLIC_ROOT_DOMAIN` to the real domain, and smoke-test:
+7. **Wire it up (you + me).** Point the apex and `app.` records at the app host,
+   set `NEXT_PUBLIC_ROOT_DOMAIN` to the real domain, and smoke-test:
    signup → verify email → create/publish an event → register → check-in.
 
 ---
@@ -79,7 +83,8 @@ I'll make these once we pick the host — most are host-agnostic:
 - **NextAuth:** enable `trustHost` (it's behind a proxy on a custom host), and
   confirm cookie scoping for the real domain.
 - **`TRUSTED_PROXY_COUNT`:** set to the proxy depth so rate-limiting reads the true
-  client IP and can't be spoofed. Cloudflare + one host proxy is typically **2**.
+  client IP and can't be spoofed. One host proxy is `1`; add Cloudflare in front
+  and it's `2`.
 - **Prisma:** add `directUrl` to the datasource (Neon pooling: app uses the pooled
   URL, migrations use the direct URL).
 - **Dockerfile** (container hosts) that builds, runs `prisma generate`, and starts
@@ -106,16 +111,15 @@ I'll make these once we pick the host — most are host-agnostic:
 
 - **Fly.io (recommended).** Container-native (`fly launch` reads a Dockerfile), a
   small machine stays warm within the free allowance, and native modules just
-  work. Put Cloudflare in front for the wildcard; the app only ever serves one
-  origin.
+  work. Add the apex and `app.` as custom domains; Fly issues certs for both.
 - **Render.** A genuinely free web service, but it **sleeps after 15 minutes**
   idle, so the first visitor after a quiet spell waits ~30 s, and the in-memory
   rate-limit counters reset on wake. Fine for early days; revisit when there's
   steady traffic. No CLI needed — deploys from a Git repo.
-- **Vercel.** Possible, but its serverless model drags in extra work for this app
-  (Prisma `binaryTargets`, pooled + direct DB URLs, a shared store for rate
-  limiting, and wildcard domains need a paid plan) — and the free Hobby tier is
-  non-commercial. Not the free path for a real product.
+- **Vercel.** More viable now that there's no wildcard to host, but its serverless
+  model still drags in extra work for this app (Prisma `binaryTargets`, pooled +
+  direct DB URLs, a shared store for rate limiting) — and the free Hobby tier is
+  non-commercial. Workable, not the simplest free path.
 
 ---
 

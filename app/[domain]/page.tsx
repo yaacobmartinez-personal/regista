@@ -57,7 +57,7 @@ export default async function TenantPublicHome({
             {events.map((event) => (
               <li key={event.id}>
                 <Link
-                  href={`/${event.slug}`}
+                  href={`/${domain}/${event.slug}`}
                   className="flex items-center justify-between gap-4 rounded-xl border border-line bg-surface px-5 py-4 transition-colors hover:border-line-strong"
                 >
                   <span className="min-w-0">

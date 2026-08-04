@@ -162,11 +162,12 @@ the Prisma engine "just work", the in-memory rate limiter actually works on one
 long-running process, and row-lock transactions need no pooling gymnastics.
 Managed Postgres (Neon / Supabase) + Resend for email.
 
-### Wildcard DNS & TLS — the options
+### Wildcard DNS & TLS — resolved
 
-The whole product is subdomain-multitenant, so `*.rootdomain` must resolve and
-be served over HTTPS. This is the part most likely to feel hard, so here are the
-ways to make it easy, best first.
+**Update:** this is no longer a concern. Tenants moved to **path-based** addresses
+(`yourdomain/acme`), with the dashboard on one fixed `app.` subdomain — so there
+is **no wildcard** to provision, only the apex and one `app.` record. The options
+below are kept for history; the path-based design is what shipped.
 
 **Option A — Cloudflare in front (recommended).**
 Put the domain on Cloudflare and proxy the app through it.

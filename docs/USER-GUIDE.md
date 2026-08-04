@@ -5,11 +5,11 @@ organizers and their attendees; if you're setting the app up to run locally,
 see the [developer guide](DEVELOPMENT.md) instead.
 
 Throughout, **your organization's address** means the web address your events
-live at — `your-org.<the Regista domain>`. Every organization gets its own, set
-when you sign up. The dashboard where you manage everything lives at
+live at — `<the Regista domain>/your-org`. Every organization gets its own path,
+set when you sign up. The dashboard where you manage everything lives at
 `app.<the Regista domain>`.
 
-> Running locally? The addresses become `your-org.localhost:3000` and
+> Running locally? The addresses become `localhost:3000/your-org` and
 > `app.localhost:3000`. Emails are printed to the server console instead of being
 > sent — the confirmation and invitation links are in there.
 
@@ -38,7 +38,7 @@ you're working in from the switcher in the dashboard.
 
 1. Go to the Regista home page and choose **Sign up**.
 2. Enter your organization's name, the address you'd like (this becomes
-   `your-org.<domain>`), and your email and password. The address has to be
+   `<domain>/your-org`), and your email and password. The address has to be
    lowercase letters, numbers and hyphens, and a few reserved names (`app`,
    `www`, `api` and similar) aren't available.
 3. We email you a confirmation link. **Your organization stays inactive until you
@@ -105,7 +105,7 @@ closed.
 ### Editing, and the public link
 
 Open any event to edit it. When it's published, its page shows the live public
-link — `your-org.<domain>/the-event` — which you can share.
+link — `<domain>/your-org/the-event` — which you can share.
 
 Raising an event's capacity, or removing the limit, **automatically promotes**
 the people who've waited longest off the waitlist into the freed places, in

@@ -18,16 +18,19 @@ export const metadata = {
 
 function Shell({
   organizationName,
+  homeHref = "/",
   children,
 }: {
   organizationName?: string;
+  /** The organization's public home; only known once the token resolves. */
+  homeHref?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-5 py-3.5">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href={homeHref} className="flex items-center gap-2.5">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-panel text-sm font-semibold text-muted">
               {(organizationName ?? "?").charAt(0).toUpperCase()}
             </span>
@@ -110,7 +113,10 @@ export default async function ManageRegistrationPage({
       : null;
 
   return (
-    <Shell organizationName={registration.tenantName}>
+    <Shell
+      organizationName={registration.tenantName}
+      homeHref={`/${registration.tenantSlug}`}
+    >
       <p className="font-mono text-xs uppercase tracking-widest text-faint">
         Your registration
       </p>
@@ -171,7 +177,7 @@ export default async function ManageRegistrationPage({
               though the place may have gone to someone else by now.
             </p>
             <Link
-              href={`/${registration.eventSlug}`}
+              href={`/${registration.tenantSlug}/${registration.eventSlug}`}
               className={`${buttonSecondary} mt-4 inline-flex`}
             >
               Go to the event page
@@ -198,7 +204,10 @@ export default async function ManageRegistrationPage({
         To correct your details or have them removed entirely, reply to your
         confirmation email — {registration.tenantName} holds this guest list. How
         your data is handled is described in our{" "}
-        <Link href="/privacy" className="underline underline-offset-2 hover:text-muted">
+        <Link
+          href={`/${registration.tenantSlug}/privacy`}
+          className="underline underline-offset-2 hover:text-muted"
+        >
           privacy notice
         </Link>
         .

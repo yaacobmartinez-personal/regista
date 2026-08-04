@@ -32,14 +32,21 @@ export function appOrigin(): string {
   return `${protocol()}://app.${rootDomain()}`;
 }
 
-/** An organization's public host, without the scheme. */
-export function tenantHost(slug: string): string {
-  return `${slug}.${rootDomain()}`;
+/**
+ * An organization's public base, without the scheme — the apex host plus its
+ * path segment, e.g. `regista.app/acme`.
+ *
+ * Tenants live at a path on the apex now, not a subdomain, so no wildcard DNS or
+ * TLS is needed. This is what's shown when displaying an address (the dashboard,
+ * the signup confirmation); the clickable URLs are built from it below.
+ */
+export function tenantPublicBase(slug: string): string {
+  return `${rootDomain()}/${slug}`;
 }
 
-/** An organization's public site. */
+/** An organization's public site, with the scheme. */
 export function tenantOrigin(slug: string): string {
-  return `${protocol()}://${tenantHost(slug)}`;
+  return `${protocol()}://${tenantPublicBase(slug)}`;
 }
 
 /** The public page for one event. */

@@ -86,6 +86,15 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
 
 ### Changed
 
+- **Tenants now live on a path, not a subdomain.** A tenant's public pages moved
+  from `acme.yourdomain` to `yourdomain/acme`, and the dashboard stays on the one
+  fixed `app.yourdomain`. This removes the need for wildcard DNS and a wildcard
+  TLS certificate — the app needs only the apex and one `app.` record, which any
+  host can issue an ordinary certificate for, so it deploys anywhere. Keeping the
+  dashboard on its own subdomain preserves the session-cookie isolation the
+  subdomain split was providing (the cookie is host-only for `app.` and is never
+  sent to a tenant's public pages — verified: an apex tenant page carries no
+  session cookie). Old tenant-subdomain links redirect to the new path form.
 - The address shown while typing an organization name and the address actually
   assigned now come from the same code. They were separate copies that could
   drift, which would have meant the preview promising a link nobody got.

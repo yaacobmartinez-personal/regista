@@ -14,7 +14,7 @@ import {
 } from "@/lib/tenant";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { pruneInBackground } from "@/lib/retention";
-import { appOrigin, tenantHost } from "@/lib/urls";
+import { appOrigin, tenantPublicBase } from "@/lib/urls";
 import {
   createSecureToken,
   verificationExpiry,
@@ -51,7 +51,7 @@ async function sendVerification(opts: {
 
   const props = {
     organizationName: opts.organization,
-    address: tenantHost(opts.slug),
+    address: tenantPublicBase(opts.slug),
     verifyUrl: `${appOrigin()}/verify?token=${raw}`,
     expiryHours: VERIFICATION_TTL_HOURS,
   };

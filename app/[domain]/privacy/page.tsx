@@ -26,7 +26,7 @@ export default async function TenantPrivacyPage({
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-5 py-3.5">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href={`/${domain}`} className="flex items-center gap-2.5">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-panel text-sm font-semibold text-muted">
               {tenant.name.charAt(0).toUpperCase()}
             </span>

@@ -63,14 +63,19 @@ pnpm dev
 
 ## Local URLs
 
-The dev server serves the apex and all subdomains on port 3000. `*.localhost` resolves to
-`127.0.0.1` automatically in modern browsers.
+Tenants live on a **path** under the apex (`/<tenant>`), not a wildcard subdomain,
+so only the apex and one fixed `app.` subdomain are needed — no wildcard DNS or
+TLS. `app.localhost` resolves to `127.0.0.1` automatically in modern browsers.
 
 | URL | Surface |
 | --- | --- |
 | `http://localhost:3000` | Marketing / landing |
 | `http://app.localhost:3000/login` | Organizer dashboard (sign in) |
-| `http://acme.localhost:3000` | A tenant's public pages |
+| `http://localhost:3000/acme` | A tenant's public pages |
+| `http://localhost:3000/acme/<event>` | A tenant's event + registration |
+
+Old-style tenant subdomains (`acme.localhost:3000`) redirect to the path form, so
+existing links keep working.
 
 ## Seed accounts
 

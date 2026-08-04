@@ -1,6 +1,6 @@
 import { requireMembership } from "@/lib/authz";
 import { supportedTimeZones } from "@/lib/time";
-import { tenantHost } from "@/lib/urls";
+import { tenantPublicBase } from "@/lib/urls";
 import { EventForm } from "../event-form";
 
 export default async function NewEventPage({
@@ -21,7 +21,7 @@ export default async function NewEventPage({
       </p>
       <EventForm
         tenantSlug={ctx.tenant.slug}
-        publicHost={tenantHost(ctx.tenant.slug)}
+        publicHost={tenantPublicBase(ctx.tenant.slug)}
         timeZones={supportedTimeZones()}
       />
     </main>

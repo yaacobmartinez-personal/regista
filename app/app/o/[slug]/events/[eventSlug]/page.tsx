@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireMembership } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 import { supportedTimeZones, utcToZonedInput } from "@/lib/time";
-import { eventUrl, tenantHost } from "@/lib/urls";
+import { eventUrl, tenantPublicBase } from "@/lib/urls";
 import { EventForm } from "../event-form";
 import { deleteEvent, setEventStatus } from "../actions";
 
@@ -22,7 +22,7 @@ export default async function EditEventPage({
   });
   if (!event) notFound();
 
-  const publicHost = tenantHost(ctx.tenant.slug);
+  const publicHost = tenantPublicBase(ctx.tenant.slug);
   const confirmed = await prisma.registration.count({
     where: { tenantId: ctx.tenant.id, eventId: event.id, status: "CONFIRMED" },
   });
