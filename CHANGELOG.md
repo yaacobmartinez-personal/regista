@@ -10,10 +10,41 @@ Nothing has been publicly released yet. Entries are grouped by build milestone
 ## [Unreleased]
 
 All six milestones are built and walked through, and every audit finding is
-addressed. Before a real launch: a verified sending domain, data processing
-agreements, and the deployment decisions listed in `docs/DATA-RETENTION.md`.
+addressed. Work has moved on to the gaps that were deliberately left out of v1.
+Before a real launch: a verified sending domain, data processing agreements, and
+the deployment decisions listed in `docs/DATA-RETENTION.md`.
 
 ### Added
+
+- **Attendees can now give up their place themselves.** Every confirmation email
+  carries a private link to the person's own registration, where they can see
+  what they signed up for and cancel if they can't come. No account, no password
+  — the link is the key, so it is stored only as a hash and the email says
+  plainly that anyone holding it can cancel on their behalf.
+
+  Cancelling frees the place and keeps the record. It is not erasure: the
+  organization still needs to know the place came free and who released it.
+  Having details removed entirely remains a separate, deliberate request.
+
+  Opening the link changes nothing — cancelling takes a click and then a
+  confirmation. A mail client that follows links to build previews would
+  otherwise give away someone's place before they had read the message.
+
+- **Organizers can promote someone off the waitlist.** A freed place is *not*
+  filled automatically. Who gets it is a judgement — the person who waited
+  longest is not always the one you'd pick — so the queue moves when an organizer
+  presses **Promote**, which is refused if the event is already at capacity.
+  (Raising an event's capacity still promotes automatically: that is the
+  organizer saying "let more people in".)
+
+- Someone who cancelled can sign up again. Previously the record left behind
+  would have told them they were already registered while they held no place at
+  all. They rejoin any waitlist at the back, since they left the queue.
+
+- **An integration test for the whole lifecycle** — cancel, promote, rejoin —
+  asserting among other things that cancelling moves *nobody* up. If a later
+  change makes promotion automatic, that test fails rather than quietly changing
+  who gets into events. Run with `pnpm test:db`.
 
 - **A test suite.** There wasn't one. It covers the things that fail silently or
   matter most: timezone conversion including the hour that doesn't exist when

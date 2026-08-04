@@ -55,7 +55,11 @@ receive email confirmations.
 - **FR-12** When an event has a capacity limit, registration respects it: once full, new
   sign-ups go to a **waitlist** (if enabled) or are declined.
 - **FR-13** A given email can register only once per event (duplicate sign-ups prevented).
+  Someone who cancelled may sign up again; they rejoin any waitlist at the back.
 - **FR-14** The registration form displays a **privacy notice** at the point of collection.
+- **FR-25** A registrant can view their own place and **give it up**, from a private link in
+  their confirmation email — no account required. Cancelling frees the place and keeps the
+  record; it is not erasure, which stays a separate request (FR-18).
 
 ### 2.5 Attendee Management
 - **FR-15** Organizers can view, search, and filter the attendee list for each event.
@@ -63,6 +67,9 @@ receive email confirmations.
 - **FR-17** Organizers can **export** an event's attendees to CSV.
 - **FR-18** Organizers can **delete/anonymize** a registrant's personal data (right to
   erasure), retaining an anonymized record for accurate counts.
+- **FR-26** Organizers can **promote** a waitlisted attendee into a free place, up to the
+  event's capacity. Places freed by cancellation are not filled automatically — who gets
+  them is the organizer's decision.
 
 ### 2.6 Team Members
 - **FR-19** Admins can invite teammates by email with a chosen role.
@@ -124,9 +131,13 @@ The following are intentionally deferred and **not** part of the first release:
 - Paid ticketing / payments (Stripe Connect)
 - Custom domains and per-tenant SSL
 - Social / OAuth login
-- Registrant self-service portal (view/cancel own registration)
-- Automatic waitlist promotion when a spot opens
-- Automatic data-retention purge job
+- Automatic waitlist promotion when a place is given up — the place is freed, but an
+  organizer chooses who takes it (FR-26). Raising an event's capacity *does* promote
+  automatically, since that is the organizer saying "let more people in".
+- Registrant accounts and a full self-service portal. Registrants can view and cancel their
+  own place from the link they were emailed (FR-25); anything more — changing their details,
+  seeing every event they've signed up to — still goes through the organizer.
+- Automatic post-event data-retention purge job
 - CAPTCHA / advanced bot protection (basic rate limiting only in v1)
 - Custom form-builder UI, reminder scheduling, analytics dashboards
 - Marketing-consent capture / email marketing

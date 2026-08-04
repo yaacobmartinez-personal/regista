@@ -291,6 +291,14 @@ never match.
 **Fix:** reject capacity below confirmed count; promote on capacity increase; drop
 the filter option if cancellation stays out of scope.
 
+**Update (2026-08-04):** cancellation is now in scope, so the third part of that
+fix was reversed. Registrants cancel from the link in their confirmation email,
+`CANCELLED` is written for real, and the "Cancelled" filter is back because it
+now matches something. Freeing a place still does not promote anyone — that is a
+decision, and it belongs to the organizer, who has a **Promote** button for it.
+This finding is fully closed only in the sense that the waitlist is no longer a
+dead end; the queue is still moved by hand except when capacity rises.
+
 ### 16. Concurrent claim of an abandoned slug 500s
 `app/home/signup/actions.tsx:129`
 

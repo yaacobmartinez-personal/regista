@@ -8,6 +8,8 @@ export type EventRegistrationProps = {
   eventWhen: string;
   organizationName: string;
   eventUrl: string;
+  /** Their own place — view it or give it up, without an account. */
+  manageUrl: string;
   waitlisted: boolean;
 };
 
@@ -17,6 +19,7 @@ export function EventRegistration({
   eventWhen,
   organizationName,
   eventUrl,
+  manageUrl,
   waitlisted,
 }: EventRegistrationProps) {
   return (
@@ -80,8 +83,16 @@ export function EventRegistration({
       </Text>
 
       <Text style={{ ...paragraph, fontSize: "13px" }}>
-        Need to cancel or change something? Reply to {organizationName} — they
-        manage this guest list.
+        {waitlisted ? "Your place on the waitlist" : "Your place"}:{" "}
+        <Link href={manageUrl} style={{ color: brand.accent, wordBreak: "break-all" }}>
+          {manageUrl}
+        </Link>
+      </Text>
+
+      <Text style={{ ...paragraph, color: brand.muted, fontSize: "13px" }}>
+        Use that link to give up your place if you can no longer come. Keep it to
+        yourself — anyone who has it can cancel for you. For anything else, reply
+        to {organizationName}; they manage this guest list.
       </Text>
     </EmailLayout>
   );
@@ -94,6 +105,7 @@ export function eventRegistrationText({
   eventWhen,
   organizationName,
   eventUrl,
+  manageUrl,
   waitlisted,
 }: EventRegistrationProps): string {
   return [
@@ -109,7 +121,10 @@ export function eventRegistrationText({
     `Host:   ${organizationName}`,
     `Page:   ${eventUrl}`,
     ``,
-    `Need to cancel or change something? Reply to ${organizationName} — they manage`,
-    `this guest list.`,
+    `Your place: ${manageUrl}`,
+    ``,
+    `Use that link to give up your place if you can no longer come. Keep it to`,
+    `yourself — anyone who has it can cancel for you. For anything else, reply to`,
+    `${organizationName}; they manage this guest list.`,
   ].join("\n");
 }

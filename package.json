@@ -15,7 +15,7 @@
     "db:reset": "prisma migrate reset",
     "db:prune": "node prisma/prune.mjs",
     "test": "tsc -p tsconfig.test.json && node -e \"require('fs').writeFileSync('.test-build/package.json','{\\\"type\\\":\\\"module\\\"}')\" && node --test tests/",
-    "test:db": "node tests/capacity-race.integration.mjs"
+    "test:db": "node tests/capacity-race.integration.mjs && node tests/registration-lifecycle.integration.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"

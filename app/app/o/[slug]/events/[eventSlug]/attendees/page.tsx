@@ -9,12 +9,11 @@ import { toggleCheckIn } from "./actions";
 import { applyAttendeeFilter, clearAttendeeFilter } from "./filter-actions";
 import { attendeeFilterCookie } from "./filter-shared";
 import { EraseButton } from "./erase-button";
+import { PromoteButton } from "./promote-button";
 
 const PAGE_SIZE = 50;
 
-// Registrations are only ever confirmed or waitlisted today; nothing writes
-// CANCELLED, so offering it as a filter would return an empty list every time.
-const STATUS_FILTERS = ["ALL", "CONFIRMED", "WAITLIST"] as const;
+const STATUS_FILTERS = ["ALL", "CONFIRMED", "WAITLIST", "CANCELLED"] as const;
 
 // Typed by the enum, so adding a status is a compile error here rather than a
 // badge that silently renders with an undefined class.
@@ -169,6 +168,7 @@ export default async function AttendeesPage({
           <option value="ALL">All statuses</option>
           <option value="CONFIRMED">Confirmed</option>
           <option value="WAITLIST">Waitlist</option>
+          <option value="CANCELLED">Cancelled</option>
         </select>
         <button
           type="submit"
@@ -253,6 +253,14 @@ export default async function AttendeesPage({
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1.5">
+                        {r.status === "WAITLIST" && !erased ? (
+                          <PromoteButton
+                            tenantSlug={ctx.tenant.slug}
+                            eventSlug={event.slug}
+                            registrationId={r.id}
+                            attendeeLabel={attendeeLabel}
+                          />
+                        ) : null}
                         <form action={toggleCheckIn}>
                           <input type="hidden" name="tenantSlug" value={ctx.tenant.slug} />
                           <input type="hidden" name="eventSlug" value={event.slug} />

@@ -271,8 +271,12 @@ rather than a fault.
 - Raising capacity, or removing the limit, **promotes the longest-waiting people**
   (`promoteFromWaitlist`, under the same row lock). Without that the queue was decorative:
   everyone already waiting stayed put while later arrivals were confirmed ahead of them.
-- Nothing writes `CANCELLED`. Registrant self-cancellation is out of scope for v1, so the
-  status filter deliberately doesn't offer it.
+- **Cancelling does not promote anyone.** A registrant giving up their place frees the seat
+  and stops there; who takes it is the organizer's call, made with the **Promote** button on
+  the attendees page (`promoteRegistration`, under the same row lock, refused when the event
+  is at capacity). This is a deliberate difference from the capacity-increase path above:
+  raising a limit is the organizer already saying "let more people in", whereas a single
+  seat coming free is not.
 
 **Times that don't exist.** On the morning clocks go forward an hour never happens, so
 `eventInputSchema` rejects a wall-clock time that isn't real in the chosen zone

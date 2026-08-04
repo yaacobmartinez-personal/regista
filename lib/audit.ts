@@ -11,6 +11,11 @@ export type AuditAction =
   | "EXPORT_ATTENDEES"
   | "ERASE_REGISTRATION"
   | "CHECK_IN_REGISTRATION"
+  // Released by the registrant themselves, from the link in their confirmation.
+  // Recorded with no actor: there is no account behind it, and naming the
+  // registration is enough to answer "why did this place come free".
+  | "CANCEL_REGISTRATION"
+  | "PROMOTE_REGISTRATION"
   | "INVITE_MEMBER"
   | "REVOKE_INVITATION"
   | "REMOVE_MEMBER"
@@ -21,7 +26,8 @@ export type AuditAction =
 
 export async function recordAudit(entry: {
   tenantId: string;
-  actorUserId: string;
+  /** Null for actions a registrant takes on themselves — there is no account. */
+  actorUserId: string | null;
   action: AuditAction;
   targetType?: string;
   /** Identifier only — never the personal data itself. */

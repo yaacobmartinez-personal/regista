@@ -46,3 +46,16 @@ export function tenantOrigin(slug: string): string {
 export function eventUrl(tenantSlug: string, eventSlug: string): string {
   return `${tenantOrigin(tenantSlug)}/${eventSlug}`;
 }
+
+/**
+ * Where a registrant manages their own place. The token goes in the query
+ * string, as the verification link does; the app's Referrer-Policy is what stops
+ * it leaking to anything the page links out to.
+ */
+export function manageRegistrationUrl(
+  tenantSlug: string,
+  eventSlug: string,
+  rawToken: string,
+): string {
+  return `${eventUrl(tenantSlug, eventSlug)}/manage?token=${encodeURIComponent(rawToken)}`;
+}

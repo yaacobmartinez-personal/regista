@@ -122,6 +122,9 @@ model Registration {
   status       RegistrationStatus @default(CONFIRMED)
   checkedInAt  DateTime?
   anonymizedAt DateTime? // set when PII is erased; row kept for counts
+  /// SHA-256 of the value emailed to the registrant, letting them manage their
+  /// own place without an account. Cleared on erasure along with the rest.
+  manageToken  String?            @unique
   createdAt    DateTime           @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)

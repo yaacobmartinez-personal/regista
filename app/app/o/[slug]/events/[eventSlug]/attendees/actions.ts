@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireMembership } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
+import type { PromoteState } from "./shared";
 
 /**
  * Attendee actions. Every write is matched on (id, tenantId) so a registration
@@ -40,6 +41,68 @@ export async function toggleCheckIn(formData: FormData): Promise<void> {
   // Route-tree path (the rewrite destination), and the tenant slug comes from
   // the verified context rather than the form body.
   revalidatePath(`/app/o/${ctx.tenant.slug}/events/${eventSlug}/attendees`);
+}
+
+/**
+ * Move one waitlisted person into a confirmed place.
+ *
+ * Cancelling deliberately does not promote anyone automatically — the decision
+ * of who takes a freed place belongs to the organizer — so this is the control
+ * that makes that decision actionable.
+ *
+ * Runs under the same event row lock registrations take, so it cannot confirm
+ * the last seat at the same moment a public sign-up does.
+ */
+export async function promoteRegistration(
+  _prev: PromoteState | undefined,
+  formData: FormData,
+): Promise<PromoteState> {
+  const tenantSlug = String(formData.get("tenantSlug") ?? "");
+  const eventSlug = String(formData.get("eventSlug") ?? "");
+  const registrationId = String(formData.get("registrationId") ?? "");
+
+  const ctx = await requireMembership(tenantSlug);
+
+  const outcome = await prisma.$transaction(async (tx) => {
+    const registration = await tx.registration.findFirst({
+      where: { id: registrationId, tenantId: ctx.tenant.id, status: "WAITLIST" },
+      select: { id: true, eventId: true },
+    });
+    if (!registration) return "gone" as const;
+
+    const locked = await tx.$queryRaw<{ capacity: number | null }[]>`
+      SELECT capacity FROM "Event" WHERE id = ${registration.eventId} FOR UPDATE
+    `;
+    const capacity = locked[0]?.capacity ?? null;
+
+    const confirmed = await tx.registration.count({
+      where: { eventId: registration.eventId, status: "CONFIRMED" },
+    });
+    // Refused rather than allowed as an override: an organizer who wants more
+    // people in the room can raise the capacity, which promotes the queue in
+    // order. Quietly exceeding the stated limit here would put the count on the
+    // public page at odds with the guest list.
+    if (capacity !== null && confirmed >= capacity) return "full" as const;
+
+    const changed = await tx.registration.updateMany({
+      where: { id: registration.id, status: "WAITLIST" },
+      data: { status: "CONFIRMED" },
+    });
+    return changed.count === 1 ? ("promoted" as const) : ("gone" as const);
+  });
+
+  if (outcome === "promoted") {
+    await recordAudit({
+      tenantId: ctx.tenant.id,
+      actorUserId: ctx.userId,
+      action: "PROMOTE_REGISTRATION",
+      targetType: "Registration",
+      targetId: registrationId,
+    });
+    revalidatePath(`/app/o/${ctx.tenant.slug}/events/${eventSlug}/attendees`);
+  }
+
+  return { outcome };
 }
 
 /**
@@ -79,6 +142,10 @@ export async function eraseRegistration(formData: FormData): Promise<void> {
       // Check-in time is equally identifying, and an erased record doesn't need
       // to say whether they turned up.
       checkedInAt: null,
+      // The link in their confirmation dies with the data it reached. Left
+      // alive, it would keep opening a page about a person who asked to be
+      // forgotten.
+      manageToken: null,
       anonymizedAt: new Date(),
     },
   });

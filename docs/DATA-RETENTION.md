@@ -26,6 +26,7 @@ retain anything the organization has not asked for.
 | Data | Contains | Retention | Automated |
 |---|---|---|---|
 | Registration (name, email) | Personal data | Until the organizer erases it | ✗ manual |
+| Registration manage token | Hash only — no personal data itself | Life of the registration; cleared on erasure | ✗ manual |
 | Erased registration | Anonymous row only | Kept indefinitely for attendance counts | n/a |
 | Event, capacity, times | No personal data | Until the organizer deletes the event | ✗ manual |
 | Verification token | Email address | 7 days after being used or expiring | ✓ `pruneExpiredRecords` |
@@ -42,6 +43,14 @@ retain anything the organization has not asked for.
 address replaced with a non-reversible placeholder. The row survives so capacity
 and attendance figures stay correct. This is anonymisation within the system, not
 destruction of every trace — see *Limits* below.
+
+**The registration manage token** is what lets an attendee reach their own place
+without an account, so unlike the other tokens here it has no expiry — the link
+has to keep working until the event. It is stored as a SHA-256 hash, so a
+database leak cannot be replayed as a live link, and it is cleared when the
+registration is erased: left alive it would keep opening a page about someone who
+asked to be forgotten. Signing up again after cancelling issues a new token and
+retires the old one.
 
 **The audit log** is retained indefinitely on purpose: it is the record of who
 accessed or removed personal data, so expiring it would defeat its purpose. It

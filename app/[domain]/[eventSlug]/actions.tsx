@@ -8,7 +8,8 @@ import { registrationInputSchema } from "@/lib/events";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { sendTemplate } from "@/lib/email";
 import { formatEventWhen } from "@/lib/time";
-import { eventUrl } from "@/lib/urls";
+import { createSecureToken } from "@/lib/tokens";
+import { eventUrl, manageRegistrationUrl } from "@/lib/urls";
 import {
   EventRegistration,
   eventRegistrationText,
@@ -61,6 +62,10 @@ export async function register(
     endsAt: Date | null;
     timezone: string;
   };
+  // Minted outside the transaction so a retry after contention doesn't reuse a
+  // value that a rolled-back attempt already wrote.
+  const manage = createSecureToken();
+
   let result: { outcome: RegisterState["outcome"]; event?: EventSummary };
   try {
     result = await prisma.$transaction(async (tx) => {
@@ -93,20 +98,48 @@ export async function register(
         timezone: event.timezone,
       };
 
+      // The (eventId, email) row outlives a cancellation, so someone who changed
+      // their mind twice would otherwise be told they are already registered
+      // while holding no place at all.
+      const existing = await tx.registration.findUnique({
+        where: { eventId_email: { eventId: event.id, email } },
+        select: { id: true, status: true },
+      });
+      if (existing && existing.status !== "CANCELLED") {
+        return { outcome: "duplicate" as const };
+      }
+
       const isFull = limits.capacity !== null && confirmed >= limits.capacity;
       if (isFull && !limits.waitlistEnabled) {
         return { outcome: "full" as const, event: summary };
       }
 
-      await tx.registration.create({
-        data: {
-          tenantId: tenant.id,
-          eventId: event.id,
-          name,
-          email,
-          status: isFull ? "WAITLIST" : "CONFIRMED",
-        },
-      });
+      const status = isFull ? ("WAITLIST" as const) : ("CONFIRMED" as const);
+
+      if (existing) {
+        await tx.registration.update({
+          where: { id: existing.id },
+          data: {
+            name,
+            status,
+            manageToken: manage.hash,
+            // Back of the queue. They left it; rejoining ahead of people who
+            // waited through would not be the fair reading of "first come".
+            createdAt: new Date(),
+          },
+        });
+      } else {
+        await tx.registration.create({
+          data: {
+            tenantId: tenant.id,
+            eventId: event.id,
+            name,
+            email,
+            status,
+            manageToken: manage.hash,
+          },
+        });
+      }
 
       return {
         outcome: (isFull ? "waitlisted" : "confirmed") as "waitlisted" | "confirmed",
@@ -165,6 +198,7 @@ export async function register(
       eventWhen: formatEventWhen(event.startsAt, event.endsAt, event.timezone),
       organizationName: tenant.name,
       eventUrl: eventUrl(tenant.slug, event.slug),
+      manageUrl: manageRegistrationUrl(tenant.slug, event.slug, manage.raw),
       waitlisted,
     };
 
