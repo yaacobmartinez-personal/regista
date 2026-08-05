@@ -91,7 +91,12 @@ export function SignupForm({ rootDomain }: { rootDomain: string }) {
 
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="font-medium">Your address</span>
+        {/* Tenants live at a path, so the domain is a prefix (domain/slug), not a
+            subdomain suffix. */}
         <span className="flex items-stretch">
+          <span className="grid place-items-center rounded-l-lg border border-r-0 border-line-strong bg-panel px-3 font-mono text-xs text-muted">
+            {rootDomain}/
+          </span>
           <input
             name="slug"
             required
@@ -109,11 +114,8 @@ export function SignupForm({ rootDomain }: { rootDomain: string }) {
                 ? true
                 : undefined
             }
-            className={`${fieldClass} w-full rounded-r-none`}
+            className={`${fieldClass} w-full rounded-l-none`}
           />
-          <span className="grid place-items-center rounded-r-lg border border-l-0 border-line-strong bg-panel px-3 font-mono text-xs text-muted">
-            .{rootDomain}
-          </span>
         </span>
         <span id="slug-status" className={`text-xs ${slugTone}`}>
           {state?.fieldErrors?.slug ?? slugMessage[slugStatus] ?? " "}
