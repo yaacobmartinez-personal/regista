@@ -78,6 +78,14 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
 
 ### Fixed
 
+- **Saving an event no longer drops you on a "page not available".** Creating,
+  updating, or deleting an event used a server-action `redirect()` to a dashboard
+  path, which — under path-based tenancy — is resolved against the flat route
+  tree and misses the host → `/app` proxy rewrite, landing on the tenant
+  not-found page. These now return where to go and navigate client-side with a
+  full load (the same approach the login flow already used), so you land back on
+  the events list. Delete calls its action imperatively so the redirect wins the
+  race against the deleted page refreshing itself to a 404.
 - **Keyboard focus is now visible everywhere.** Around forty buttons and links
   had no focus indicator at all, because the app turns off the browser default
   and those had never been given a replacement.

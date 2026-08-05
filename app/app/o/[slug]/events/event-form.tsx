@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 // The same function the server uses, so this preview can't promise a link the
 // user won't get.
 import { slugify as slugifyTitle } from "@/lib/slug";
@@ -42,6 +42,13 @@ export function EventForm({
     isEdit ? updateEvent : createEvent,
     undefined,
   );
+
+  // A full navigation, so the request passes through the host → `/app` rewrite
+  // (a server-action redirect would land on the tenant "not available" page).
+  const redirectTo = state?.redirectTo;
+  useEffect(() => {
+    if (redirectTo) window.location.assign(redirectTo);
+  }, [redirectTo]);
 
   const [title, setTitle] = useState(event?.title ?? "");
   const [slug, setSlug] = useState(event?.slug ?? "");
@@ -215,10 +222,10 @@ export function EventForm({
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || Boolean(redirectTo)}
           className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
-          {pending ? "Saving…" : isEdit ? "Save changes" : "Create event"}
+          {pending || redirectTo ? "Saving…" : isEdit ? "Save changes" : "Create event"}
         </button>
         <Link
           href={`/o/${tenantSlug}`}

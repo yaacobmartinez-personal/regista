@@ -5,7 +5,8 @@ import { prisma } from "@/lib/db";
 import { supportedTimeZones, utcToZonedInput } from "@/lib/time";
 import { eventUrl, tenantPublicBase } from "@/lib/urls";
 import { EventForm } from "../event-form";
-import { deleteEvent, setEventStatus } from "../actions";
+import { DeleteEventButton } from "../delete-event-button";
+import { setEventStatus } from "../actions";
 
 export default async function EditEventPage({
   params,
@@ -91,16 +92,7 @@ export default async function EditEventPage({
           </form>
 
           {ctx.role === "ADMIN" ? (
-            <form action={deleteEvent}>
-              <input type="hidden" name="tenantSlug" value={ctx.tenant.slug} />
-              <input type="hidden" name="eventId" value={event.id} />
-              <button
-                type="submit"
-                className="rounded-lg border border-line-strong px-3 py-2 text-sm font-medium text-danger transition-colors hover:bg-panel"
-              >
-                Delete
-              </button>
-            </form>
+            <DeleteEventButton tenantSlug={ctx.tenant.slug} eventId={event.id} />
           ) : null}
         </div>
       </div>

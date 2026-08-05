@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireMembership } from "@/lib/authz";
@@ -86,7 +85,7 @@ export async function createEvent(
   });
 
   revalidateEventSurfaces(ctx.tenant.slug, slug);
-  redirect(`/o/${ctx.tenant.slug}`);
+  return { redirectTo: `/o/${ctx.tenant.slug}` };
 }
 
 export async function updateEvent(
@@ -148,7 +147,7 @@ export async function updateEvent(
   });
 
   revalidateEventSurfaces(ctx.tenant.slug, slug);
-  redirect(`/o/${ctx.tenant.slug}`);
+  return { redirectTo: `/o/${ctx.tenant.slug}` };
 }
 
 /** Publish or close an event. Status is only ever set through this action. */
@@ -171,7 +170,10 @@ export async function setEventStatus(formData: FormData): Promise<void> {
   revalidateEventSurfaces(ctx.tenant.slug, updated.slug);
 }
 
-export async function deleteEvent(formData: FormData): Promise<void> {
+export async function deleteEvent(
+  _prev: EventFormState | undefined,
+  formData: FormData,
+): Promise<EventFormState> {
   const tenantSlug = String(formData.get("tenantSlug") ?? "");
   const eventId = String(formData.get("eventId") ?? "");
   const ctx = await requireMembership(tenantSlug, "ADMIN");
@@ -198,5 +200,5 @@ export async function deleteEvent(formData: FormData): Promise<void> {
   });
 
   revalidateEventSurfaces(ctx.tenant.slug, event.slug);
-  redirect(`/o/${ctx.tenant.slug}`);
+  return { redirectTo: `/o/${ctx.tenant.slug}` };
 }
