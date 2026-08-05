@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Thingstead favicon: the mark on a navy tile — gold ring of people around a
+       cream pillar T. Colours are hard-coded (a favicon can't read theme vars)
+       and chosen to read on both light and dark browser chrome. -->
+  <rect width="32" height="32" rx="7" fill="#1b2333"/>
+  <g transform="translate(2.9 2.9) scale(0.82)">
+    <polygon points="26.39,10 16,4 5.61,10 5.61,22 16,28 26.39,22"
+      fill="none" stroke="#c6a45f" stroke-width="2.1" stroke-linejoin="round"/>
+    <g fill="#c6a45f">
+      <circle cx="16" cy="4" r="2.7"/>
+      <circle cx="26.39" cy="10" r="2.7"/>
+      <circle cx="26.39" cy="22" r="2.7"/>
+      <circle cx="16" cy="28" r="2.7"/>
+      <circle cx="5.61" cy="22" r="2.7"/>
+      <circle cx="5.61" cy="10" r="2.7"/>
+    </g>
+    <g fill="#f7f6f2">
+      <rect x="10.4" y="10.6" width="11.2" height="2.7" rx="0.7"/>
+      <rect x="14.5" y="10.6" width="3" height="10.8" rx="0.7"/>
+      <rect x="11.8" y="20.4" width="8.4" height="2.5" rx="0.7"/>
+    </g>
+  </g>
+</svg>

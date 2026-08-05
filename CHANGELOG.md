@@ -94,7 +94,9 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
   on a warm off-white. In dark mode the gold brightens to carry the buttons,
   since navy would disappear against the dark background. Contrast was kept to
   WCAG AA throughout — the gold used for text is a bronze dark enough to clear
-  4.5:1, while a brighter gold is reserved for the (non-text) logo linework.
+  4.5:1, while a brighter gold is reserved for the (non-text) logo linework. The
+  **favicon** is the mark too — an SVG tile (`app/icon.svg`) that stays legible
+  down to 16px, replacing the scaffold's default.
 - **Renamed Regista → Thingstead** (domain `thingstead.pro`). Every user-facing
   name, title, email, and the logo mark (now a **T**) is updated, along with
   internal identifiers (package name, theme key, cookies, dev-server config). The
