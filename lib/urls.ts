@@ -34,7 +34,7 @@ export function appOrigin(): string {
 
 /**
  * An organization's public base, without the scheme — the apex host plus its
- * path segment, e.g. `regista.app/acme`.
+ * path segment, e.g. `thingstead.pro/acme`.
  *
  * Tenants live at a path on the apex now, not a subdomain, so no wildcard DNS or
  * TLS is needed. This is what's shown when displaying an address (the dashboard,

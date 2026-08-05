@@ -4,13 +4,13 @@ import { resolveActiveTenant } from "@/lib/tenant";
 import { Logo } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-export const metadata = { title: "How your details are used — Regista" };
+export const metadata = { title: "How your details are used — Thingstead" };
 
 /**
  * Per-organization privacy notice.
  *
  * Served under the tenant's own subdomain because the organization is the
- * controller for its registrants — Regista only processes on their behalf. The
+ * controller for its registrants — Thingstead only processes on their behalf. The
  * page names them explicitly rather than leaving "we" ambiguous.
  */
 export default async function TenantPrivacyPage({
@@ -49,7 +49,7 @@ export default async function TenantPrivacyPage({
           <h2 className="text-lg font-semibold">Who holds your details</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted">
             <strong className="text-fg">{tenant.name}</strong> decides what your
-            details are used for and is responsible for them. Regista provides
+            details are used for and is responsible for them. Thingstead provides
             the software they use, and handles the information only on their
             instructions.
           </p>
@@ -72,7 +72,7 @@ export default async function TenantPrivacyPage({
             Organizers at {tenant.name}, and Resend, the service that delivers
             the confirmation email — it receives your name and address for that
             purpose. Your details are never sold or shared with anyone else, and
-            never visible to another organization using Regista.
+            never visible to another organization using Thingstead.
           </p>
         </section>
 
@@ -106,7 +106,7 @@ export default async function TenantPrivacyPage({
 
         <footer className="mt-14 flex items-center gap-1.5 border-t border-line pt-6 text-xs text-faint">
           <Logo className="!h-4 !w-4 !text-[10px]" />
-          <span>Powered by Regista</span>
+          <span>Powered by Thingstead</span>
         </footer>
       </main>
     </div>

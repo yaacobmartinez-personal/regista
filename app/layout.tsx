@@ -14,13 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Regista — Event registration for every organization",
+  title: "Thingstead — Event registration for every organization",
   description:
     "Multitenant event registration. Publish events, collect registrations, manage attendees.",
 };
 
 // Set the theme before paint to avoid a flash of the wrong theme.
-const noFlashTheme = `try{var t=localStorage.getItem('regista-theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}`;
+const noFlashTheme = `try{var t=localStorage.getItem('thingstead-theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}`;
 
 export default function RootLayout({
   children,
@@ -38,7 +38,7 @@ export default function RootLayout({
             wrong one. `beforeInteractive` is the supported way to do this —
             a bare <script> element is rendered by React, which warns that it
             won't execute on client navigations. */}
-        <Script id="regista-theme" strategy="beforeInteractive">
+        <Script id="thingstead-theme" strategy="beforeInteractive">
           {noFlashTheme}
         </Script>
         {children}

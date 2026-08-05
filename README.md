@@ -1,4 +1,4 @@
-# Regista
+# Thingstead
 
 Multitenant event registration platform. Each organization ("tenant") gets its own
 subdomain, publishes events, and collects free registrations from the public. Organizers

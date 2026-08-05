@@ -27,7 +27,7 @@ export default function MarketingHome() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-10 sm:flex-row">
           <div className="flex items-center gap-2 text-sm text-muted">
             <Logo className="!h-5 !w-5 !text-[11px]" />
-            <span>Regista</span>
+            <span>Thingstead</span>
           </div>
           <p className="font-mono text-xs text-faint">
             Event registration for every organization

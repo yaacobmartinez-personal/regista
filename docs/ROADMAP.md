@@ -1,4 +1,4 @@
-# Regista — roadmap & next phases
+# Thingstead — roadmap & next phases
 
 Where the product goes from here. This is a living plan, not a contract; phases
 are ordered by value-for-effort and by what unblocks what. It complements
@@ -173,21 +173,21 @@ below are kept for history; the path-based design is what shipped.
 Put the domain on Cloudflare and proxy the app through it.
 - **Wildcard DNS:** a single `*` record pointing at the origin host.
 - **Wildcard TLS:** Cloudflare's free Universal SSL certificate already covers
-  the apex **and first-level wildcards** (`*.regista.app`) — which is all Regista
+  the apex **and first-level wildcards** (`*.thingstead.pro`) — which is all Thingstead
   uses (`acme.`, `app.`). No cert wrangling on the origin; use a Cloudflare
   Origin Certificate for Full (strict) TLS to the backend.
 - **Origin:** any host — Fly, Railway, Render, or a plain VPS.
 - Net effect: the wildcard problem essentially disappears, for free.
 
 **Option B — A platform that manages the wildcard for you.**
-- **Vercel:** add `*.regista.app` as a domain (paid plan) and it issues the cert.
+- **Vercel:** add `*.thingstead.pro` as a domain (paid plan) and it issues the cert.
   Least infra, but drags in the serverless caveats we've noted (Prisma
   `binaryTargets`, pooled + direct DB URLs, and a shared store for rate limiting).
-- **Fly.io:** `fly certs add "*.regista.app"` issues a wildcard cert via a DNS-01
+- **Fly.io:** `fly certs add "*.thingstead.pro"` issues a wildcard cert via a DNS-01
   challenge (needs one DNS record). Works, slightly more hands-on than A.
 
 **Option C — Sidestep wildcards entirely: path-based tenancy (fallback).**
-Serve tenants at `regista.app/acme` instead of `acme.regista.app`. One domain,
+Serve tenants at `thingstead.pro/acme` instead of `acme.thingstead.pro`. One domain,
 one ordinary certificate, zero wildcard anything.
 - **Cost:** it's an architecture change — [proxy.ts](../proxy.ts) and the URL
   helpers in [lib/urls.ts](../lib/urls.ts) are built around subdomains — and it
@@ -241,7 +241,7 @@ the least build; each also stands alone as a feature. Detail lands in
 ## Phase E — Custom tier
 
 - **Custom domains** per tenant (bring-your-own domain + cert), and removing the
-  "Powered by Regista" mark.
+  "Powered by Thingstead" mark.
 - **Multi-level organizations** (sub-orgs / hierarchy) for larger customers.
 
 ---

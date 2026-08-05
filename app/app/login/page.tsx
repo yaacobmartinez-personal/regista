@@ -32,7 +32,7 @@ export default function LoginPage() {
       <div className="relative w-full max-w-sm rounded-2xl border border-line bg-surface p-8 shadow-sm">
         <div className="flex items-center gap-2">
           <Logo />
-          <span className="font-semibold tracking-tight">Regista</span>
+          <span className="font-semibold tracking-tight">Thingstead</span>
         </div>
         <h1 className="mt-6 text-xl font-semibold tracking-tight">Sign in</h1>
         <p className="mt-1 text-sm text-muted">

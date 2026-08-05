@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ConfirmPanel } from "./confirm-panel";
 
 export const metadata = {
-  title: "Verify your email — Regista",
+  title: "Verify your email — Thingstead",
 };
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -84,7 +84,7 @@ export default async function VerifyPage({
         </div>
         <p className="mt-10 flex items-center gap-1.5 text-xs text-faint">
           <Logo className="!h-4 !w-4 !text-[10px]" />
-          <span>Powered by Regista</span>
+          <span>Powered by Thingstead</span>
         </p>
       </Shell>
     );
@@ -99,7 +99,7 @@ export default async function VerifyPage({
       />
       <p className="mt-10 flex items-center gap-1.5 text-xs text-faint">
         <Logo className="!h-4 !w-4 !text-[10px]" />
-        <span>Powered by Regista</span>
+        <span>Powered by Thingstead</span>
       </p>
     </Shell>
   );

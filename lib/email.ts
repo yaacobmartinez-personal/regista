@@ -89,7 +89,7 @@ export async function sendEmail({
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: process.env.EMAIL_FROM ?? "Regista <no-reply@regista.app>",
+      from: process.env.EMAIL_FROM ?? "Thingstead <no-reply@thingstead.pro>",
       to,
       subject,
       html,

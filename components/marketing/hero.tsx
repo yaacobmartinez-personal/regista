@@ -171,7 +171,7 @@ function BrowserMock() {
         <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
         <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
         <span className="ml-2 rounded-md bg-canvas px-2.5 py-1 font-mono text-[11px] text-muted">
-          acme.regista.app
+          thingstead.pro/acme
         </span>
       </div>
 

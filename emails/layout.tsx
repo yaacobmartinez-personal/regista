@@ -80,7 +80,7 @@ export function EmailLayout({
                       width: "26px",
                     }}
                   >
-                    R
+                    T
                   </td>
                   <td style={{ paddingLeft: "8px" }}>
                     <Text
@@ -91,7 +91,7 @@ export function EmailLayout({
                         margin: 0,
                       }}
                     >
-                      Regista
+                      Thingstead
                     </Text>
                   </td>
                 </tr>
@@ -116,7 +116,7 @@ export function EmailLayout({
           <Hr style={{ borderColor: brand.border, margin: "28px 0 16px" }} />
 
           <Text style={{ color: brand.faint, fontSize: "12px", margin: 0 }}>
-            {footerNote ?? "Sent by Regista, the event registration platform."}
+            {footerNote ?? "Sent by Thingstead, the event registration platform."}
           </Text>
         </Container>
       </Body>

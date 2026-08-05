@@ -1,4 +1,4 @@
-# Regista — Project Requirements (v1)
+# Thingstead — Project Requirements (v1)
 
 _Multitenant event registration platform. This document lists the requirements for the
 first release (v1). It is derived from the approved implementation plan and its PM,
@@ -10,7 +10,7 @@ security, and privacy reviews._
 
 ## 1. Overview
 
-Regista is a software-as-a-service (SaaS) platform that lets organizations ("tenants")
+Thingstead is a software-as-a-service (SaaS) platform that lets organizations ("tenants")
 run their own event registration under their own web address (subdomain). Each
 organization creates events, publishes a public registration page, collects free
 registrations from the public, manages attendees, and invites teammates. Registrants
@@ -19,7 +19,7 @@ receive email confirmations.
 **Personas**
 - **Organizer (tenant Admin/Staff):** creates and runs events, manages attendees and team.
 - **Registrant (public):** signs up to attend an event; no account required.
-- **Platform operator:** runs Regista (acts as data *processor* on tenants' behalf).
+- **Platform operator:** runs Thingstead (acts as data *processor* on tenants' behalf).
 
 ---
 
@@ -87,7 +87,7 @@ receive email confirmations.
 ## 3. Non-Functional Requirements
 
 ### 3.1 Multitenancy & Data Isolation
-- **NFR-1** Each organization is reached at its own subdomain (`org.regista.app`).
+- **NFR-1** Each organization is reached at its own subdomain (`org.thingstead.pro`).
 - **NFR-2** Data is strictly isolated between organizations: no organization can read or
   modify another's events, attendees, or members under any circumstances.
 - **NFR-3** The active organization is determined server-side; it can never be forced by a

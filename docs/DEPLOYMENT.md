@@ -1,6 +1,6 @@
-# Deploying Regista on free tiers
+# Deploying Thingstead on free tiers
 
-Getting Regista online without a hosting bill, one service at a time. This is the
+Getting Thingstead online without a hosting bill, one service at a time. This is the
 runbook for Phase C in the [roadmap](ROADMAP.md).
 
 > **Free-tier limits drift.** The allowances below were accurate at time of
@@ -9,7 +9,7 @@ runbook for Phase C in the [roadmap](ROADMAP.md).
 
 ---
 
-## What Regista needs from a host
+## What Thingstead needs from a host
 
 Grounded in the code, so we pick services that can actually run it:
 
@@ -100,9 +100,9 @@ I'll make these once we pick the host — most are host-agnostic:
 | `AUTH_SECRET` | `openssl rand -base64 32` |
 | `DATABASE_URL` | Neon **pooled** connection string |
 | `DIRECT_URL` | Neon **direct** connection string (migrations) |
-| `NEXT_PUBLIC_ROOT_DOMAIN` | e.g. `regista.app` |
+| `NEXT_PUBLIC_ROOT_DOMAIN` | e.g. `thingstead.pro` |
 | `RESEND_API_KEY` | from Resend |
-| `EMAIL_FROM` | e.g. `Regista <no-reply@regista.app>` |
+| `EMAIL_FROM` | e.g. `Thingstead <no-reply@thingstead.pro>` |
 | `TRUSTED_PROXY_COUNT` | `2` (Cloudflare + host), confirm per host |
 
 ---

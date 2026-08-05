@@ -33,7 +33,7 @@ export function ThemeToggle() {
     const next: Theme = theme === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
     try {
-      localStorage.setItem("regista-theme", next);
+      localStorage.setItem("thingstead-theme", next);
     } catch {
       // ignore storage failures (private mode, etc.)
     }

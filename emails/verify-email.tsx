@@ -21,7 +21,7 @@ export function VerifyEmail({
     >
       <Text style={paragraph}>
         You created <strong style={{ color: brand.text }}>{organizationName}</strong> on
-        Regista. Confirm this address and your registration pages go live at{" "}
+        Thingstead. Confirm this address and your registration pages go live at{" "}
         <strong style={{ color: brand.text }}>{address}</strong>.
       </Text>
 
@@ -67,7 +67,7 @@ export function verifyEmailText({
   return [
     `Confirm your email`,
     ``,
-    `You created "${organizationName}" on Regista. Confirm this address and your`,
+    `You created "${organizationName}" on Thingstead. Confirm this address and your`,
     `registration pages go live at ${address}.`,
     ``,
     verifyUrl,

@@ -102,7 +102,7 @@ export default async function PublicEventPage({
 
         <footer className="mt-16 flex items-center gap-1.5 border-t border-line pt-6 text-xs text-faint">
           <Logo className="!h-4 !w-4 !text-[10px]" />
-          <span>Powered by Regista</span>
+          <span>Powered by Thingstead</span>
         </footer>
       </main>
     </div>

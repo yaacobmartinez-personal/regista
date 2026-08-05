@@ -27,7 +27,7 @@ export function TeamInvite({
       <Text style={paragraph}>
         {`${inviterName} invited you to help run events for `}
         <strong style={{ color: brand.text }}>{organizationName}</strong>
-        {` on Regista.`}
+        {` on Thingstead.`}
       </Text>
 
       <table cellPadding={0} cellSpacing={0} role="presentation" style={detailBox} width="100%">
@@ -107,7 +107,7 @@ export function teamInviteText({
   return [
     `Join ${organizationName}`,
     ``,
-    `${inviterName} invited you to help run events for ${organizationName} on Regista.`,
+    `${inviterName} invited you to help run events for ${organizationName} on Thingstead.`,
     ``,
     `Your role: ${roleLabel}`,
     `${roleSummary}`,

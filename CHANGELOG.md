@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Regista are recorded here, following
+All notable changes to Thingstead are recorded here, following
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Nothing has been publicly released yet. Entries are grouped by build milestone
@@ -86,6 +86,14 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
 
 ### Changed
 
+- **Renamed Regista → Thingstead** (domain `thingstead.pro`). Every user-facing
+  name, title, email, and the logo mark (now a **T**) is updated, along with
+  internal identifiers (package name, theme key, cookies, dev-server config). The
+  name means *place of assembly* — from the Old Norse/English *Thing* (an
+  assembly) and *stead* (a place) — and the product overview's name-origin
+  section was rewritten to match. Only the local Docker database name is left as
+  `regista`, since renaming it would orphan the running dev database; it's
+  internal and no user ever sees it.
 - **Tenants now live on a path, not a subdomain.** A tenant's public pages moved
   from `acme.yourdomain` to `yourdomain/acme`, and the dashboard stays on the one
   fixed `app.yourdomain`. This removes the need for wildcard DNS and a wildcard
@@ -184,7 +192,7 @@ Four independent audits were run over the codebase; the findings are recorded in
 deployment would have been unsafe without.
 
 - **Registering someone else's email address no longer locks them out of
-  Regista.** An address nobody has confirmed is now treated as unclaimed: it
+  Thingstead.** An address nobody has confirmed is now treated as unclaimed: it
   cannot be signed into, and the person who does confirm it takes ownership. It
   was previously possible to register a colleague's address, keep a working
   login for it, and leave them permanently unable to accept an invitation, with
@@ -373,7 +381,7 @@ on the day, take the list away, and remove someone's details on request.
 ## [M3] — Events and public registration — 2026-07-28
 
 Organizers can publish events, and the public can sign up for them. This is the
-first milestone where Regista does the job it exists for.
+first milestone where Thingstead does the job it exists for.
 
 ### Added
 

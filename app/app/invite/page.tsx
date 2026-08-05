@@ -13,7 +13,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { signOutAction } from "../actions";
 import { AcceptPanel, CreateAccountPanel } from "./accept-panels";
 
-export const metadata = { title: "Join a team — Regista" };
+export const metadata = { title: "Join a team — Thingstead" };
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -159,7 +159,7 @@ export default async function InvitePage({
       <Shell>
         {summary}
         <p className="mt-6 text-sm text-muted">
-          You already have a Regista account for{" "}
+          You already have a Thingstead account for{" "}
           <span className="font-medium text-fg">{invitation.email}</span>. Sign in,
           then open this link again to join.
         </p>

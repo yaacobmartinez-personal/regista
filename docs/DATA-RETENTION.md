@@ -1,6 +1,6 @@
 # Data retention policy
 
-What Regista stores, how long it keeps it, and what is automated versus manual.
+What Thingstead stores, how long it keeps it, and what is automated versus manual.
 
 `docs/REQUIREMENTS.md` (NFR-15) states that a written retention policy accompanies
 the product. This is that document — it did not exist until the privacy audit
@@ -14,9 +14,9 @@ implied.
 
 ## Roles
 
-The operator of Regista is a **processor**. Each organization is the
+The operator of Thingstead is a **processor**. Each organization is the
 **controller** for the people who register for its events, and decides how long
-to keep their details. Regista's job is to make deletion possible and not to
+to keep their details. Thingstead's job is to make deletion possible and not to
 retain anything the organization has not asked for.
 
 ---

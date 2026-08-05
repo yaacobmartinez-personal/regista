@@ -14,7 +14,7 @@ const STEPS = [
   {
     n: "01",
     title: "Create your organization",
-    body: "Sign up, name your organization, and claim your address — like acme.regista.app. Verify your email and you're live.",
+    body: "Sign up, name your organization, and claim your address — like thingstead.pro/acme. Verify your email and you're live.",
     art: <ArtClaim />,
   },
   {
@@ -154,8 +154,8 @@ function ArtClaim() {
         Your address
       </p>
       <div className="mt-3 flex items-center gap-2 rounded-lg border border-line bg-canvas px-3 py-2.5">
+        <span className="font-mono text-sm text-faint">thingstead.pro/</span>
         <span className="font-mono text-sm font-medium">acme</span>
-        <span className="font-mono text-sm text-faint">.regista.app</span>
         <span className="ml-auto rounded-full bg-success-bg px-2 py-0.5 font-mono text-[10px] uppercase text-success">
           Available
         </span>

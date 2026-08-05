@@ -4,7 +4,7 @@ import { requireMembership } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 import { Scanner } from "./scanner";
 
-export const metadata = { title: "Check in — Regista" };
+export const metadata = { title: "Check in — Thingstead" };
 
 export default async function CheckInPage({
   params,

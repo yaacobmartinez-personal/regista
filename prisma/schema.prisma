@@ -1,4 +1,4 @@
-// Regista — data model
+// Thingstead — data model
 // Single Postgres, tenant-isolated. Every tenant-scoped row carries tenantId and is
 // always queried with a tenant filter (see lib/authz.ts).
 

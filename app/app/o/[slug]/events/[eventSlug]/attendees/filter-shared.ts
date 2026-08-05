@@ -5,7 +5,7 @@ export type AttendeeFilter = { q: string; status: string };
 
 /** Per-event so filtering one guest list doesn't affect another. */
 export function attendeeFilterCookie(eventId: string): string {
-  return `regista-attendees-${eventId}`;
+  return `thingstead-attendees-${eventId}`;
 }
 
 export const FILTER_COOKIE_MAX_AGE = 60 * 30;

@@ -4,7 +4,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { appOrigin, rootDomain } from "@/lib/urls";
 
 export const metadata = {
-  title: "Create your organization — Regista",
+  title: "Create your organization — Thingstead",
 };
 
 export default function SignupPage() {

@@ -4,7 +4,7 @@ import { formatInZone } from "@/lib/time";
 import { InviteForm } from "./invite-form";
 import { changeRole, removeMember, revokeInvitation } from "./actions";
 
-export const metadata = { title: "Team — Regista" };
+export const metadata = { title: "Team — Thingstead" };
 
 /**
  * Invitation expiry. Rendered in UTC and labelled, because an invitation isn't

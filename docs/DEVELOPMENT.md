@@ -1,13 +1,13 @@
-# Regista — Developer Guide
+# Thingstead — Developer Guide
 
-Architecture, conventions, and gotchas for working on Regista. For the product framing see
+Architecture, conventions, and gotchas for working on Thingstead. For the product framing see
 [business-explainer.html](business-explainer.html); for scope see [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ---
 
 ## 1. Architecture at a glance
 
-Regista is a **single full-stack Next.js app** (no separate API service). Business logic
+Thingstead is a **single full-stack Next.js app** (no separate API service). Business logic
 runs in **Server Actions** (dashboard mutations) and **Route Handlers** (public endpoints,
 webhooks, exports). One Postgres database backs everything, with strict per-tenant isolation
 enforced in application code.

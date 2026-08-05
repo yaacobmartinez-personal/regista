@@ -1,13 +1,13 @@
-# Regista — user guide
+# Thingstead — user guide
 
-How to run events on Regista, start to finish. This is the product guide for
+How to run events on Thingstead, start to finish. This is the product guide for
 organizers and their attendees; if you're setting the app up to run locally,
 see the [developer guide](DEVELOPMENT.md) instead.
 
 Throughout, **your organization's address** means the web address your events
-live at — `<the Regista domain>/your-org`. Every organization gets its own path,
+live at — `<the Thingstead domain>/your-org`. Every organization gets its own path,
 set when you sign up. The dashboard where you manage everything lives at
-`app.<the Regista domain>`.
+`app.<the Thingstead domain>`.
 
 > Running locally? The addresses become `localhost:3000/your-org` and
 > `app.localhost:3000`. Emails are printed to the server console instead of being
@@ -17,7 +17,7 @@ set when you sign up. The dashboard where you manage everything lives at
 
 ## 1. Who does what
 
-Regista has three kinds of people:
+Thingstead has three kinds of people:
 
 - **Admins** — can manage events, attendees, **and the team** (invite people,
   change roles, remove members). The person who signs the organization up is the
@@ -36,7 +36,7 @@ you're working in from the switcher in the dashboard.
 
 ## 2. Creating your organization
 
-1. Go to the Regista home page and choose **Sign up**.
+1. Go to the Thingstead home page and choose **Sign up**.
 2. Enter your organization's name, the address you'd like (this becomes
    `<domain>/your-org`), and your email and password. The address has to be
    lowercase letters, numbers and hyphens, and a few reserved names (`app`,
@@ -54,7 +54,7 @@ else can use it — but only if nothing was created under it.
 
 ## 3. Signing in
 
-Go to `app.<the Regista domain>` and sign in with your email and password. You
+Go to `app.<the Thingstead domain>` and sign in with your email and password. You
 land on your dashboard. If you belong to more than one organization, use the
 switcher to move between them.
 
@@ -94,7 +94,7 @@ closed.
    - **Timezone** — the zone the event happens in. Everyone, wherever they are,
      sees the event at this local time, and the confirmation email agrees with
      the page. If you pick a start time that doesn't exist — the hour skipped
-     when clocks go forward — Regista asks you to choose another, rather than
+     when clocks go forward — Thingstead asks you to choose another, rather than
      silently shifting the event.
    - **Capacity** — optional. Leave blank for no limit.
    - **Waitlist** — when capacity is set, turn this on to let people join a
@@ -251,7 +251,7 @@ deletes data.
 
 ## 8. A note on privacy
 
-Regista keeps a light **audit log** — who exported, erased, checked in, or
+Thingstead keeps a light **audit log** — who exported, erased, checked in, or
 promoted a registrant, and when. It records identifiers and timestamps only,
 never the personal data itself, so you can answer "who touched this attendee's
 details" without the log becoming another copy of them. Cancellations are logged

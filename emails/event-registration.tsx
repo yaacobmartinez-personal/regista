@@ -30,7 +30,7 @@ export function EventRegistration({
           : `You're registered for ${eventTitle}`
       }
       heading={waitlisted ? "You're on the waitlist" : "You're registered"}
-      footerNote={`Sent by ${organizationName} using Regista.`}
+      footerNote={`Sent by ${organizationName} using Thingstead.`}
     >
       <Text style={paragraph}>
         Hi {attendeeName},{" "}

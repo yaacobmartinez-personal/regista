@@ -25,7 +25,7 @@ export default function TenantNotFound() {
         </p>
         <p className="mt-12 flex items-center gap-1.5 text-xs text-faint">
           <Logo className="!h-4 !w-4 !text-[10px]" />
-          <span>Powered by Regista</span>
+          <span>Powered by Thingstead</span>
         </p>
       </main>
     </div>

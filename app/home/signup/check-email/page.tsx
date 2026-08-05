@@ -7,7 +7,7 @@ import { PENDING_EMAIL_COOKIE } from "../shared";
 import { ResendButton } from "./resend-button";
 
 export const metadata = {
-  title: "Check your email — Regista",
+  title: "Check your email — Thingstead",
 };
 
 export default async function CheckEmailPage() {

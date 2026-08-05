@@ -104,7 +104,7 @@ Verification evidence for the P0 batch:
 
 ## P0 — Fix before any deployment — ✅ DONE
 
-### 1. Anyone can permanently lock a person out of Regista
+### 1. Anyone can permanently lock a person out of Thingstead
 `lib/auth.ts:33`, `app/home/signup/actions.tsx:136`
 
 Signup writes a `passwordHash` before the address is verified, and `authorize`
