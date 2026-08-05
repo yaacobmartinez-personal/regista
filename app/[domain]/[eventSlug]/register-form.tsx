@@ -163,7 +163,7 @@ export function RegisterForm({
         at this event, and can correct or remove them on request.{" "}
         <Link
           href={`/${tenantSlug}/privacy`}
-          className="text-accent underline-offset-2 hover:underline"
+          className="text-gold underline-offset-2 hover:underline"
         >
           How your details are used
         </Link>

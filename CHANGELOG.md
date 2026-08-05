@@ -86,6 +86,15 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
 
 ### Changed
 
+- **New logo and colour palette.** The mark is the Thingstead emblem — six people
+  gathered in a ring (the *Thing*, an assembly) around a central pillar (the
+  *stead*, the place) — drawn as inline SVG so it stays crisp at every size and
+  follows the theme. The palette moved to the mark's own colours: **navy ink and
+  filled buttons, with gold as the accent** for links, the logo, and highlights,
+  on a warm off-white. In dark mode the gold brightens to carry the buttons,
+  since navy would disappear against the dark background. Contrast was kept to
+  WCAG AA throughout — the gold used for text is a bronze dark enough to clear
+  4.5:1, while a brighter gold is reserved for the (non-text) logo linework.
 - **Renamed Regista → Thingstead** (domain `thingstead.pro`). Every user-facing
   name, title, email, and the logo mark (now a **T**) is updated, along with
   internal identifiers (package name, theme key, cookies, dev-server config). The

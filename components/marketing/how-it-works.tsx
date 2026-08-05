@@ -74,7 +74,7 @@ function PinnedTrack() {
             <div key={s.n} className="w-1/3 shrink-0 px-5">
               <div className="mx-auto grid max-w-5xl grid-cols-[1fr_1fr] items-center gap-14">
                 <div>
-                  <span className="font-mono text-sm text-accent">{s.n}</span>
+                  <span className="font-mono text-sm text-gold">{s.n}</span>
                   <h3 className="mt-3 text-4xl font-semibold tracking-tight">
                     {s.title}
                   </h3>
@@ -118,7 +118,7 @@ function StackedFallback() {
         {STEPS.map((s, i) => (
           <Reveal key={s.n} delay={i * 0.08}>
             <li className="h-full rounded-2xl border border-line bg-surface p-6">
-              <span className="font-mono text-sm text-accent">{s.n}</span>
+              <span className="font-mono text-sm text-gold">{s.n}</span>
               <h3 className="mt-3 text-lg font-semibold tracking-tight">
                 {s.title}
               </h3>

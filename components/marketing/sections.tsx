@@ -74,7 +74,7 @@ export function Features() {
                 transition={{ duration: 0.25, ease: EASE }}
                 className="h-full rounded-2xl border border-line bg-surface p-6 transition-colors hover:border-line-strong"
               >
-                <span className="grid h-10 w-10 place-items-center rounded-lg bg-accent/10 text-accent">
+                <span className="grid h-10 w-10 place-items-center rounded-lg bg-gold/10 text-gold">
                   {f.icon}
                 </span>
                 <h3 className="mt-4 text-base font-semibold tracking-tight">

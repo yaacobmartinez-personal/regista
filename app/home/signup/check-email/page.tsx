@@ -35,7 +35,7 @@ export default async function CheckEmailPage() {
             strokeWidth="1.6"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="h-5 w-5 text-accent"
+            className="h-5 w-5 text-gold"
           >
             <rect x="3" y="5" width="18" height="14" rx="2" />
             <path d="m3 7 9 6 9-6" />

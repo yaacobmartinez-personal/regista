@@ -43,7 +43,7 @@ export default async function EditEventPage({
                   href={eventUrl(ctx.tenant.slug, event.slug)}
                   target="_blank"
                   rel="noreferrer"
-                  className="font-mono text-accent underline-offset-4 hover:underline"
+                  className="font-mono text-gold underline-offset-4 hover:underline"
                 >
                   {publicHost}/{event.slug}
                 </a>

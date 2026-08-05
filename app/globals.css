@@ -9,17 +9,24 @@
 /* Foreground values are chosen to clear WCAG AA (4.5:1) against every surface
    they are used on — surface, panel and canvas — in both themes. */
 @theme {
-  --color-canvas: #f6f7f9;
+  /* Thingstead palette: navy ink on warm off-white, with a gold accent — the
+     hexagon-and-pillar mark's own colours. */
+  --color-canvas: #f7f6f2;
   --color-surface: #ffffff;
-  --color-panel: #f0f2f5;
-  --color-line: #e3e6eb;
-  --color-line-strong: #d2d7de;
-  --color-fg: #191c22;
-  --color-muted: #616b7a;
-  --color-faint: #656e7c;
-  --color-accent: #3355e6;
-  --color-accent-hover: #2843c4;
+  --color-panel: #f0eee7;
+  --color-line: #e6e2d8;
+  --color-line-strong: #d6d0c1;
+  --color-fg: #1b2333;
+  --color-muted: #5a6270;
+  --color-faint: #6a7280;
+  /* Navy is the filled colour — primary buttons, focus rings — with white on
+     top (high contrast, and the mark's own ink colour). */
+  --color-accent: #26385c;
+  --color-accent-hover: #1c2a45;
   --color-on-accent: #ffffff;
+  /* Gold is the accent: links, the logo, small highlights. Bronze-dark so it
+     still clears WCAG AA (4.5:1) as text on surface/canvas. */
+  --color-gold: #8a6a2f;
   --color-success: #177a4c;
   --color-success-bg: rgba(23, 122, 76, 0.08);
   --color-danger: #c11c1c;
@@ -34,19 +41,20 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --color-canvas: #0d1015;
-  --color-surface: #151a21;
-  --color-panel: #1b212a;
-  --color-line: #272e38;
-  --color-line-strong: #333c48;
-  --color-fg: #e6e9ef;
-  --color-muted: #949ead;
-  --color-faint: #828c9b;
-  --color-accent: #6e86ff;
-  --color-accent-hover: #8499ff;
-  /* Dark accent is light enough that white text on it fails AA; near-black
-     reads at 5.91 on the accent and 7.24 on its hover. */
-  --color-on-accent: #0d1015;
+  --color-canvas: #10151f;
+  --color-surface: #181f2b;
+  --color-panel: #1f2735;
+  --color-line: #2b3446;
+  --color-line-strong: #394456;
+  --color-fg: #e7e9ef;
+  --color-muted: #99a2b2;
+  --color-faint: #828b9b;
+  /* On dark, the gold brightens to become the filled accent, and dark ink rides
+     on top of it — the reverse of the light theme. Dark-on-gold clears AA. */
+  --color-accent: #c6a45f;
+  --color-accent-hover: #d4b673;
+  --color-on-accent: #10151f;
+  --color-gold: #cba869;
   --color-success: #35c07e;
   --color-success-bg: rgba(53, 192, 126, 0.12);
   --color-danger: #ff8f8f;

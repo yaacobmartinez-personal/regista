@@ -66,7 +66,7 @@ export default async function TenantPublicHome({
                       {formatWhen(event.startsAt, event.timezone)}
                     </span>
                   </span>
-                  <span className="shrink-0 text-sm text-accent">Register →</span>
+                  <span className="shrink-0 text-sm text-gold">Register →</span>
                 </Link>
               </li>
             ))}
