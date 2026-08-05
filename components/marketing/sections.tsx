@@ -19,7 +19,7 @@ import {
 const FEATURES = [
   {
     title: "Your own branded address",
-    body: "Each organization gets its own subdomain — a registration home that feels like yours, not ours.",
+    body: "Each organization gets its own address — a registration home that feels like yours, not ours.",
     icon: <GlobeIcon />,
   },
   {
@@ -29,13 +29,23 @@ const FEATURES = [
   },
   {
     title: "Know who's coming",
-    body: "A searchable guest list, one-tap check-in on the day, and CSV export whenever you need it.",
+    body: "A searchable guest list, and CSV export whenever you need it for badges or the door.",
     icon: <UsersIcon />,
   },
   {
+    title: "Check them in with a scan",
+    body: "Turn any phone into a scanner — read each attendee's QR code and they're marked present on the spot.",
+    icon: <ScanIcon />,
+  },
+  {
     title: "Confirmations, automatic",
-    body: "Every registrant gets a confirmation email the moment they sign up.",
+    body: "Every registrant gets a confirmation email — carrying their check-in code — the moment they sign up.",
     icon: <MailIcon />,
+  },
+  {
+    title: "Attendees manage themselves",
+    body: "A private link lets each registrant view or give up their place — no account, no back-and-forth.",
+    icon: <TicketIcon />,
   },
   {
     title: "Your team, right access",
@@ -238,6 +248,22 @@ function MailIcon() {
     <svg {...iconProps()}>
       <rect x="3" y="5" width="18" height="14" rx="2" />
       <path d="m3.5 6.5 8.5 6 8.5-6" />
+    </svg>
+  );
+}
+function ScanIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+      <path d="M4 12h16" />
+    </svg>
+  );
+}
+function TicketIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 6 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-6Z" />
+      <path d="M14.5 7.5v9" />
     </svg>
   );
 }

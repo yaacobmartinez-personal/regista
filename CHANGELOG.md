@@ -86,6 +86,10 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
 
 ### Changed
 
+- **The marketing page caught up with what shipped** — QR check-in ("check them
+  in with a scan") and registrant self-service now have their own feature cards,
+  the "how it works" step mentions scanning, and the stale "subdomain" wording is
+  now "address" to match path-based tenancy.
 - **New logo and colour palette.** The mark is the Thingstead emblem — six people
   gathered in a ring (the *Thing*, an assembly) around a central pillar (the
   *stead*, the place) — drawn as inline SVG so it stays crisp at every size and

@@ -26,7 +26,7 @@ const STEPS = [
   {
     n: "03",
     title: "Manage everyone who signs up",
-    body: "Track registrations as they arrive, check attendees in on the day, and export your guest list whenever you need it.",
+    body: "Track registrations as they arrive, scan attendees in on the day with any phone, and export your guest list whenever you need it.",
     art: <ArtManage />,
   },
 ];
