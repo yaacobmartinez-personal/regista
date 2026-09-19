@@ -249,3 +249,88 @@ export async function loadEventDetail(
     createdAt: event.createdAt.toISOString(),
   };
 }
+
+/** A published event as the public sees it (#11, #12 in the contract). */
+export type PublicEventView = {
+  slug: string;
+  title: string;
+  description?: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  timezone: string;
+  capacity: number | null;
+  /** Seats left, or null when uncapped. */
+  remaining: number | null;
+  isFull: boolean;
+  waitlistEnabled: boolean;
+};
+
+function toPublicEvent(
+  event: {
+    slug: string;
+    title: string;
+    description: string | null;
+    startsAt: Date;
+    endsAt: Date | null;
+    timezone: string;
+    capacity: number | null;
+    waitlistEnabled: boolean;
+  },
+  confirmed: number,
+  withDescription: boolean,
+): PublicEventView {
+  const remaining = seatsRemaining(event.capacity, confirmed);
+  return {
+    slug: event.slug,
+    title: event.title,
+    ...(withDescription ? { description: event.description } : {}),
+    startsAt: event.startsAt.toISOString(),
+    endsAt: event.endsAt ? event.endsAt.toISOString() : null,
+    timezone: event.timezone,
+    capacity: event.capacity,
+    remaining,
+    isFull: remaining !== null && remaining <= 0,
+    waitlistEnabled: event.waitlistEnabled,
+  };
+}
+
+/**
+ * An organization's published events, soonest first.
+ *
+ * DRAFT and CLOSED are left out entirely rather than shown as unavailable: a
+ * draft is not public, and a closed one is over as far as a would-be attendee is
+ * concerned. The same rule the public web page applies.
+ */
+export async function publicEvents(tenantId: string): Promise<PublicEventView[]> {
+  const events = await prisma.event.findMany({
+    where: { tenantId, status: "PUBLISHED" },
+    orderBy: { startsAt: "asc" },
+  });
+
+  // One grouped count rather than one per event: this is the page an attendee
+  // lands on, and the database is a long way from the server.
+  const confirmed = await prisma.registration.groupBy({
+    by: ["eventId"],
+    where: { tenantId, status: "CONFIRMED" },
+    _count: { _all: true },
+  });
+  const byEvent = new Map(confirmed.map((row) => [row.eventId, row._count._all]));
+
+  return events.map((event) => toPublicEvent(event, byEvent.get(event.id) ?? 0, false));
+}
+
+/** One published event, with its description. Null for draft, closed or missing. */
+export async function publicEvent(
+  tenantId: string,
+  eventSlug: string,
+): Promise<PublicEventView | null> {
+  const event = await prisma.event.findFirst({
+    where: { tenantId, slug: eventSlug, status: "PUBLISHED" },
+  });
+  if (!event) return null;
+
+  const confirmed = await prisma.registration.count({
+    where: { tenantId, eventId: event.id, status: "CONFIRMED" },
+  });
+  return toPublicEvent(event, confirmed, true);
+}

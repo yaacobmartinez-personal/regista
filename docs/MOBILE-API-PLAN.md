@@ -5,10 +5,10 @@ waiting on this backend. Its `docs/API-CONTRACT.md` is the specification; this
 document is the plan for building it here, plus the corrections and decisions
 that contract needs before work starts.
 
-Status: **Phases 0–4 are built** (the foundation, the seven endpoints section 1
+Status: **Phases 0–5 are built** — the foundation, the seven endpoints section 1
 of the contract wrongly listed as already serving, the fields the app needs to
-run a door offline, event CRUD, and the attendee-list actions). Phases 5–9 are
-still plan. Decisions taken since the first draft are marked **Decided** below.
+run a door offline, event CRUD, the attendee-list actions, and attendee mode.
+Phases 6–9 are still plan. Decisions taken since the first draft are marked **Decided** below.
 
 ---
 
@@ -73,7 +73,7 @@ noted under "Contract corrections" below.
 
 | Phase | Change | For |
 |---|---|---|
-| 5 | `Registration.userId String?` + `@@index([userId])` | Tickets belong to an account (#13–#17) |
+| **5 ✓** | `Registration.userId String?` + `@@index([userId])`, `onDelete: SetNull` | Tickets belong to an account (#13–#17) |
 | 6 | `PasswordResetToken` model (hashed token, 1 h TTL, single-use) | Password reset (#4, #5) — **the web has no reset flow at all today** |
 | 8 | `User.googleSub String? @unique`, `User.appleSub String? @unique` | Social sign-in (#6, #7) |
 | 7 | New `AuditAction` value `CREATE_TENANT` | Org creation (#35) |
@@ -133,7 +133,7 @@ independently shippable. Phase 1 is mandatory; everything after is a choice.
 | 2 ✓ | Offline scan support — `checkInToken` and `waitlist` on the attendee payload, `at` on check-in | #23, #24 | `offlineTokens` | none |
 | 3 ✓ | Event CRUD | #18–#22 | `eventCrud` | none |
 | 4 ✓ | Promote / erase / CSV export | #25–#27 | `promoteErase`, `csvExport` | none |
-| 5 | Attendee mode — public reads, register, tickets | #8–#17 | `attendeeMode` | `Registration.userId` |
+| 5 ✓ | Attendee mode — public reads, register, tickets | #8–#17 | `attendeeMode` | `Registration.userId` |
 | 6 | Signup, email verification, password reset | #1–#5 | `signup`, `passwordReset` | `PasswordResetToken` |
 | 7 | Org creation and team management | #28–#35 | `createOrg`, `team` | `CREATE_TENANT` audit |
 | 8 | Google and Apple sign-in | #6, #7 | `socialSignIn` | `googleSub`, `appleSub` |
@@ -352,3 +352,57 @@ whatever the organizer feeds it to.
   lists 404 among its errors; in practice only the organization check produces
   one. Erase does 404 a missing id, because `{ok: true}` there would claim an
   erasure that never happened.
+
+---
+
+## 13. Phase 5 — attendee mode
+
+Built: the account and its organizations (#8, #9), the unauthenticated public
+reads under `/api/public/*` (#10–#12), registering as a signed-in account (#13),
+and tickets — list, read, import, cancel (#14–#17).
+
+This is the first phase that adds a product concept rather than exposing an
+existing one. Until now every registration was reached by the link in its
+confirmation email and belonged to nobody; `Registration.userId` lets a place
+belong to an account as well. The link keeps working and stays the only key for
+the web form, which still takes no account.
+
+### The register transaction is now shared
+
+`registerForEvent` in `lib/register.tsx` is the code the public web form and the
+API both run. The row lock, the waitlist decision and the rejoin-after-cancel
+rule have one implementation, because two would eventually oversell an event.
+What differs is only where the identity comes from: the form asks for a name and
+an email, the app supplies the account's verified address and links the place to
+it. The capacity-race integration test still passes — it holds at 5/5 under the
+lock while its unlocked control oversells to 9.
+
+### Decisions worth knowing
+
+- **The address is always the account's, never the request's.** #13 takes only a
+  name. A signed-in person can register themselves and no one else, so the
+  endpoint cannot be used to book in someone else's name, nor to probe whether an
+  address is already registered.
+- **A duplicate claims the place.** Registering again for an event this account's
+  address already holds answers `duplicate` *and* sets `userId` if it was unset.
+  The contract only says to set it on create and on rejoin — but the response
+  carries the ticket, and a ticket that never appeared in `GET /mobile/tickets`
+  would be a bug. The address on the row is this account's verified address, so
+  the place is already theirs.
+- **Import requires matching addresses.** A confirmation link is emailed to one
+  person and forwarding it is easy. Without the check, anyone passed a
+  confirmation could attach a stranger's place to their account and read their
+  name, status and ticket. The account's own address is verified, so it cannot be
+  changed to defeat this.
+- **Contention answers 429, not 500.** The event row lock deliberately
+  serialises sign-ups, so a rush can exceed the transaction window. That is not
+  an outcome the attendee can act on differently, and 429 is what the app already
+  retries.
+- **Closing an account detaches its places, it does not cancel them.** The
+  organizer's headcount should not change because someone stopped using the app,
+  so `userId` is nulled and the registration stands — the emailed link remains
+  the way back to it. `onDelete: SetNull` on the relation says the same thing.
+- **Erased and suspended rows are hidden from ticket reads.** An erased
+  registration survives for the organizer's counts but no longer describes a
+  person, and a suspended organization's pages are not served — so neither
+  appears in a ticket list.

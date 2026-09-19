@@ -28,6 +28,18 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
   scanning twice reports "already" rather than failing. Erased attendees still
   appear with their place intact and nothing identifying, and the placeholder
   address left behind by an erasure cannot be searched for.
+- **Attendees can use the app too.** Someone with an account can browse an
+  organization's published events, take a place, and keep their tickets in one
+  list instead of digging through email — each with the QR to show at the door.
+  Places booked before the app can be pulled in using the link from the
+  confirmation email, provided it was sent to the address on the account, so a
+  forwarded link cannot attach someone else's place to your own. Giving up a
+  place works from the app as well, until the event starts. Signing up uses the
+  account's own confirmed address, so nobody can be registered in someone else's
+  name, and the same capacity and waitlist rules apply whether the sign-up came
+  from the website or the phone. Closing an account releases nothing: the places
+  stay booked and the organizer's headcount is unchanged.
+
 - **Managing the guest list from the app.** Organizers can now move someone off
   the waitlist into a free place, erase a registrant's details when they ask to
   be forgotten, and download the attendee list as a spreadsheet — all from the

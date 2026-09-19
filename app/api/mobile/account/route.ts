@@ -53,6 +53,13 @@ export const DELETE = route(async (request: Request) => {
     if (stuck.length > 0) return stuck;
 
     await tx.membership.deleteMany({ where: { userId: user.id } });
+    // The places they booked stay booked — an organizer's headcount does not
+    // change because someone stopped using the app — but they stop belonging to
+    // an account. The emailed link remains the way back to them.
+    await tx.registration.updateMany({
+      where: { userId: user.id },
+      data: { userId: null },
+    });
     await tx.user.update({
       where: { id: user.id },
       data: {
