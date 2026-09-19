@@ -1,11 +1,11 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
-import { revalidatePath } from "next/cache";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireMembership } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
+import { eraseRegistrationData, promoteWaitlisted } from "@/lib/attendees";
+import { revalidateAttendeeList } from "@/lib/event-surfaces";
 import type { PromoteState } from "./shared";
 
 /**
@@ -40,7 +40,7 @@ export async function toggleCheckIn(formData: FormData): Promise<void> {
 
   // Route-tree path (the rewrite destination), and the tenant slug comes from
   // the verified context rather than the form body.
-  revalidatePath(`/app/o/${ctx.tenant.slug}/events/${eventSlug}/attendees`);
+  revalidateAttendeeList(ctx.tenant.slug, eventSlug);
 }
 
 /**
@@ -63,43 +63,13 @@ export async function promoteRegistration(
 
   const ctx = await requireMembership(tenantSlug);
 
-  const outcome = await prisma.$transaction(async (tx) => {
-    const registration = await tx.registration.findFirst({
-      where: { id: registrationId, tenantId: ctx.tenant.id, status: "WAITLIST" },
-      select: { id: true, eventId: true },
-    });
-    if (!registration) return "gone" as const;
-
-    const locked = await tx.$queryRaw<{ capacity: number | null }[]>`
-      SELECT capacity FROM "Event" WHERE id = ${registration.eventId} FOR UPDATE
-    `;
-    const capacity = locked[0]?.capacity ?? null;
-
-    const confirmed = await tx.registration.count({
-      where: { eventId: registration.eventId, status: "CONFIRMED" },
-    });
-    // Refused rather than allowed as an override: an organizer who wants more
-    // people in the room can raise the capacity, which promotes the queue in
-    // order. Quietly exceeding the stated limit here would put the count on the
-    // public page at odds with the guest list.
-    if (capacity !== null && confirmed >= capacity) return "full" as const;
-
-    const changed = await tx.registration.updateMany({
-      where: { id: registration.id, status: "WAITLIST" },
-      data: { status: "CONFIRMED" },
-    });
-    return changed.count === 1 ? ("promoted" as const) : ("gone" as const);
-  });
+  const outcome = await promoteWaitlisted(
+    { tenantId: ctx.tenant.id, userId: ctx.userId },
+    registrationId,
+  );
 
   if (outcome === "promoted") {
-    await recordAudit({
-      tenantId: ctx.tenant.id,
-      actorUserId: ctx.userId,
-      action: "PROMOTE_REGISTRATION",
-      targetType: "Registration",
-      targetId: registrationId,
-    });
-    revalidatePath(`/app/o/${ctx.tenant.slug}/events/${eventSlug}/attendees`);
+    revalidateAttendeeList(ctx.tenant.slug, eventSlug);
   }
 
   return { outcome };
@@ -119,48 +89,13 @@ export async function eraseRegistration(formData: FormData): Promise<void> {
 
   const ctx = await requireMembership(tenantSlug);
 
-  const registration = await prisma.registration.findFirst({
-    where: { id: registrationId, tenantId: ctx.tenant.id },
-    select: { id: true, anonymizedAt: true, createdAt: true },
-  });
-  if (!registration) notFound();
-  if (registration.anonymizedAt) return; // already erased
-
-  // Coarsen the sign-up time to the day as well as clearing the identifiers.
-  // Kept to the second, the row could be matched back to a person using any CSV
-  // exported before the erasure — the timestamp alone is close to unique.
-  const coarseCreatedAt = new Date(registration.createdAt);
-  coarseCreatedAt.setUTCHours(0, 0, 0, 0);
-
-  await prisma.registration.update({
-    where: { id: registration.id },
-    data: {
-      name: null,
-      email: `deleted+${registration.id}@anon.invalid`,
-      customFields: Prisma.DbNull,
-      createdAt: coarseCreatedAt,
-      // Check-in time is equally identifying, and an erased record doesn't need
-      // to say whether they turned up.
-      checkedInAt: null,
-      // The link in their confirmation dies with the data it reached. Left
-      // alive, it would keep opening a page about a person who asked to be
-      // forgotten.
-      manageToken: null,
-      // Same for the QR ticket — an erased person should not resolve at a door.
-      checkInToken: null,
-      anonymizedAt: new Date(),
-    },
-  });
-
-  await recordAudit({
-    tenantId: ctx.tenant.id,
-    actorUserId: ctx.userId,
-    action: "ERASE_REGISTRATION",
-    targetType: "Registration",
-    targetId: registration.id,
-  });
+  const outcome = await eraseRegistrationData(
+    { tenantId: ctx.tenant.id, userId: ctx.userId },
+    registrationId,
+  );
+  if (outcome === "gone") notFound();
 
   // Route-tree path (the rewrite destination), and the tenant slug comes from
   // the verified context rather than the form body.
-  revalidatePath(`/app/o/${ctx.tenant.slug}/events/${eventSlug}/attendees`);
+  revalidateAttendeeList(ctx.tenant.slug, eventSlug);
 }

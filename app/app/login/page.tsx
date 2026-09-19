@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
+import Link from "next/link";
 import { Logo } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authenticate } from "./actions";
@@ -54,7 +55,15 @@ export default function LoginPage() {
             />
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium">Password</span>
+            <span className="flex items-center justify-between">
+              <span className="font-medium">Password</span>
+              <Link
+                href="/forgot"
+                className="text-xs font-normal text-muted hover:text-fg"
+              >
+                Forgot it?
+              </Link>
+            </span>
             <input
               name="password"
               type="password"

@@ -21,6 +21,14 @@ enum TenantStatus {
   ACTIVE
 }
 
+/// Billing tier. Only FREE is sold today; the others exist so the mobile API
+/// can report a tier from the first release rather than changing shape later.
+enum PlanTier {
+  FREE
+  PREMIUM
+  CUSTOM
+}
+
 enum EventStatus {
   DRAFT
   PUBLISHED
@@ -38,6 +46,7 @@ model Tenant {
   slug      String       @unique // the subdomain
   name      String
   status    TenantStatus @default(PENDING)
+  plan      PlanTier     @default(FREE)
   createdAt DateTime     @default(now())
 
   memberships   Membership[]
@@ -53,10 +62,16 @@ model User {
   name          String?
   passwordHash  String?
   emailVerified DateTime?
+  /// Bumped to revoke every mobile bearer token issued to this user. The value
+  /// is carried in the token and compared on each request, so raising it logs
+  /// the account out of every device at once (see lib/mobile-auth.ts). Web
+  /// sessions are unaffected — those are NextAuth cookies.
+  tokenVersion  Int       @default(0)
   createdAt     DateTime  @default(now())
 
-  memberships Membership[]
-  auditLogs   AuditLog[]
+  memberships   Membership[]
+  auditLogs     AuditLog[]
+  registrations Registration[]
 }
 
 model Membership {
@@ -116,6 +131,11 @@ model Registration {
   id           String             @id @default(cuid())
   tenantId     String
   eventId      String
+  /// The account that owns this place, when the person signed up from the app
+  /// or later claimed the place from their confirmation link. Null for the
+  /// web's sign-up form, which takes no account — there the emailed link is the
+  /// only key, and that stays true.
+  userId       String?
   name         String?
   email        String
   customFields Json?
@@ -136,10 +156,15 @@ model Registration {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  /// SetNull, not Cascade: closing an account must not delete the places it
+  /// booked. The organizer's headcount and the room's capacity do not change
+  /// because someone stopped using the app.
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@unique([eventId, email])
   @@index([tenantId])
   @@index([eventId])
+  @@index([userId])
 }
 
 /// Accountability trail for access to registrant personal data.
@@ -164,6 +189,21 @@ model AuditLog {
 
   @@index([tenantId])
   @@index([createdAt])
+}
+
+/// Password reset. Like VerificationToken, `token` stores a SHA-256 hash of the
+/// value emailed out, so a database leak cannot be replayed as a live link.
+/// Short-lived and single-use: a reset link is a way into an account, so it is
+/// held to a tighter window than a verification link, which only confirms one.
+model PasswordResetToken {
+  identifier String // the email address the link was sent to
+  token      String    @unique
+  expiresAt  DateTime
+  usedAt     DateTime? // single-use: set on redemption
+  createdAt  DateTime  @default(now())
+
+  @@id([identifier, token])
+  @@index([identifier])
 }
 
 // Owner email verification at signup (and future flows).

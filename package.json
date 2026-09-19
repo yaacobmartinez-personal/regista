@@ -14,8 +14,9 @@
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
     "db:prune": "node prisma/prune.mjs",
-    "test": "tsc -p tsconfig.test.json && node -e \"require('fs').writeFileSync('.test-build/package.json','{\\\"type\\\":\\\"module\\\"}')\" && node --test tests/",
-    "test:db": "node tests/capacity-race.integration.mjs && node tests/registration-lifecycle.integration.mjs && node tests/checkin.integration.mjs"
+    "test": "tsc -p tsconfig.test.json && node -e \"require('fs').writeFileSync('.test-build/package.json','{\\\"type\\\":\\\"module\\\"}')\" && node --test tests/*.test.mjs",
+    "test:db": "node tests/capacity-race.integration.mjs && node tests/registration-lifecycle.integration.mjs && node tests/checkin.integration.mjs",
+    "test:api": "node tests/api.integration.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"

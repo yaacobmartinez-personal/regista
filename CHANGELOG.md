@@ -16,6 +16,102 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
 
 ### Added
 
+- **A JSON API for the mobile app.** The Flutter client in the `thingstead-mobile`
+  repository can now sign in and run a door: the first seven endpoints of
+  `docs/API-CONTRACT.md` are live under `/api/mobile/*`. An organizer signs in
+  with the same credentials they use on the web and gets a bearer token (the
+  web's session cookie is host-only for the dashboard subdomain and can never
+  reach a native client), then lists their organizations, an organization's
+  events with live headcounts, and one event's attendee list with search. Staff
+  can mark someone present by hand or by scanning their ticket — the scanner
+  accepts both the QR's full URL and a code typed off a printed ticket, and
+  scanning twice reports "already" rather than failing. Erased attendees still
+  appear with their place intact and nothing identifying, and the placeholder
+  address left behind by an erasure cannot be searched for.
+- **Teams and organizations, from the app.** Admins can see who is on the team
+  and who has been invited, send and withdraw invitations, promote and demote
+  people, remove them, or leave themselves — and they can start a new
+  organization from the phone, which is usable the moment it is made rather than
+  waiting on another confirmation email. An invitation can only be accepted by
+  the address it was sent to, so a forwarded one puts nobody anywhere. And an
+  organization can never be left with no admin: the last one cannot step down,
+  be removed, or leave until somebody else is promoted, because an organization
+  with no admin has no way back in.
+
+- **Anyone can make an account, and forgotten passwords are recoverable.**
+  Signing up in the app creates a personal account with no organization attached
+  — until now an account only ever existed alongside one — and the confirmation
+  email says what it actually does rather than talking about activating an
+  organization you do not have. Confirming the address signs you straight in, on
+  whichever device opened the link.
+
+  **Password reset now exists at all**, which it did not before. Ask from the
+  app or from the sign-in page, follow the link, choose a new password. Setting
+  one signs you out everywhere else and quietly ends every other reset link
+  outstanding for the account — if you are resetting because you think somebody
+  else has been in, that is the point. The link lasts an hour and works once.
+  None of these screens will tell you whether an address has an account, so
+  nobody can use them to find out.
+
+- **Attendees can use the app too.** Someone with an account can browse an
+  organization's published events, take a place, and keep their tickets in one
+  list instead of digging through email — each with the QR to show at the door.
+  Places booked before the app can be pulled in using the link from the
+  confirmation email, provided it was sent to the address on the account, so a
+  forwarded link cannot attach someone else's place to your own. Giving up a
+  place works from the app as well, until the event starts. Signing up uses the
+  account's own confirmed address, so nobody can be registered in someone else's
+  name, and the same capacity and waitlist rules apply whether the sign-up came
+  from the website or the phone. Closing an account releases nothing: the places
+  stay booked and the organizer's headcount is unchanged.
+
+- **Managing the guest list from the app.** Organizers can now move someone off
+  the waitlist into a free place, erase a registrant's details when they ask to
+  be forgotten, and download the attendee list as a spreadsheet — all from the
+  phone, under the rules the dashboard already applies. Promoting past a full
+  event is still refused rather than quietly overriding the stated limit: raising
+  the capacity is what lets more people in, and it moves the queue up in order.
+  Erasing twice is not an error, so acting on a repeated request cannot fail.
+  The exported file marks erased rows without naming anyone, and a name typed to
+  look like a spreadsheet formula is still neutralised before it can run.
+
+- **Organizers can run their events from the app.** Creating, editing,
+  publishing, closing and deleting an event all work from the phone now, under
+  the same rules as the dashboard and with the same wording when something is
+  wrong — down to the warning that a time does not exist on a night the clocks
+  go forward. Capacity still cannot be set below the number of people already
+  holding a place, and raising it still moves the longest-waiting people up at
+  once. Publishing stays its own deliberate step rather than something an edit
+  can do by accident, and only an admin can delete an event, since that takes
+  every registration under it. An event published from the app appears on the
+  public site immediately, as one published from the dashboard does.
+
+- **Running a door with no signal.** The attendee list the app caches now carries
+  each ticket's check-in code and the event's waitlist count, so a scanner with
+  no connection can recognise a ticket and say who it belongs to — and give the
+  same named answer as online for a waitlisted place, a cancelled one, or a
+  ticket for the wrong event, instead of a shrug. Marking someone present also
+  accepts the time it actually happened, so a queue of check-ins taken offline
+  and sent an hour later records the door rather than the moment the signal came
+  back. A time from a badly wrong clock is refused; a phone a few seconds out is
+  simply treated as now, because a door should not send staff to an error list
+  over a clock.
+
+- **Closing your own account.** The product's first account-removal path, from
+  the app. The record is anonymized rather than deleted, the same trade erasing a
+  registration makes, so the audit trail keeps its shape; every membership goes,
+  and the account can no longer sign in or be invited back by address. Refused
+  while you are the only admin of an organization other people or real events
+  depend on — handing it over first is better than stranding it.
+- **Revocable mobile sessions.** Every bearer token carries the account's
+  `tokenVersion`, checked on each request, so raising that one number signs an
+  account out of every device at once without touching its password or its web
+  session. Closing an account does exactly that, which is what ends its sessions
+  — the record survives anonymization, so nothing else would.
+- **A billing tier on organizations.** `Tenant.plan` (`FREE`, `PREMIUM`,
+  `CUSTOM`, defaulting to `FREE`) is reported by the API from the first release,
+  so adding paid tiers later does not change a shape the app already reads.
+
 - **QR check-in.** Every registration now carries a check-in code. Attendees find
   a QR on their registration page (the one their confirmation email links to);
   staff open **Scan check-in** from an event to turn a phone into a scanner —

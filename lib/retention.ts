@@ -3,9 +3,10 @@ import { prisma } from "@/lib/db";
 /**
  * Retention housekeeping.
  *
- * Verification tokens and invitations both store an email address, and neither
- * was ever deleted — a spent token from a signup two years ago kept that address
- * indefinitely, for no purpose. Anything past its usefulness is removed here.
+ * Verification tokens, password resets and invitations all store an email
+ * address, and none was ever deleted — a spent token from a signup two years ago
+ * kept that address indefinitely, for no purpose. Anything past its usefulness
+ * is removed here.
  *
  * Deliberately not a background job: there is no scheduler in this deployment,
  * so this runs opportunistically from the signup path and can also be invoked
@@ -17,6 +18,7 @@ const TOKEN_GRACE_DAYS = 7;
 
 export type PruneResult = {
   verificationTokens: number;
+  passwordResetTokens: number;
   invitations: number;
 };
 
@@ -27,6 +29,15 @@ export async function pruneExpiredRecords(): Promise<PruneResult> {
   // who clicks an old link still gets "already verified" rather than a blank
   // "invalid" for a while.
   const tokens = await prisma.verificationToken.deleteMany({
+    where: {
+      OR: [{ usedAt: { lt: cutoff } }, { expiresAt: { lt: cutoff } }],
+    },
+  });
+
+  // Spent or expired reset links. No grace period worth speaking of: unlike a
+  // verification link there is nothing kind to say about an old one, and it is
+  // the shortest-lived, most sensitive token here.
+  const resets = await prisma.passwordResetToken.deleteMany({
     where: {
       OR: [{ usedAt: { lt: cutoff } }, { expiresAt: { lt: cutoff } }],
     },
@@ -43,6 +54,7 @@ export async function pruneExpiredRecords(): Promise<PruneResult> {
 
   return {
     verificationTokens: tokens.count,
+    passwordResetTokens: resets.count,
     invitations: invitations.count,
   };
 }

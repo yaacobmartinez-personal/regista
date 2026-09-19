@@ -1,7 +1,7 @@
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import type { EventStatus, Prisma, RegistrationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { isValidTimeZone, wallClockExists, zonedInputToUtc } from "@/lib/time";
+import { isValidTimeZone, utcToZonedInput, wallClockExists, zonedInputToUtc } from "@/lib/time";
 import { slugify } from "@/lib/slug";
 
 /** Turn a title into a URL segment. Same code the client preview runs. */
@@ -173,3 +173,164 @@ export const registrationInputSchema = z.object({
   name: z.string().trim().min(1, "Tell us your name.").max(120),
   email: z.string().trim().toLowerCase().email("Enter a valid email address."),
 });
+
+/** One event as the mobile API describes it (`EventDetail` in the contract). */
+export type EventDetailView = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  timezone: string;
+  startsAtLocal: string;
+  endsAtLocal: string | null;
+  capacity: number | null;
+  waitlistEnabled: boolean;
+  status: EventStatus;
+  confirmed: number;
+  waitlist: number;
+  checkedIn: number;
+  createdAt: string;
+};
+
+/**
+ * Read one event with its headline numbers, or null when the tenant has no such
+ * event.
+ *
+ * Deliberately re-read after a create or an edit rather than assembled from what
+ * was just written: raising capacity promotes people off the waitlist in the
+ * same transaction, so the counts the caller should see are the ones in the
+ * database, not the ones the request asked for.
+ *
+ * The `*Local` fields are the wall-clock strings the event's own timezone puts
+ * on those instants — the values an edit form needs to show, and the same
+ * conversion `utcToZonedInput` does for the web form.
+ */
+export async function loadEventDetail(
+  tenantId: string,
+  eventSlug: string,
+): Promise<EventDetailView | null> {
+  const event = await prisma.event.findFirst({
+    where: { tenantId, slug: eventSlug },
+  });
+  if (!event) return null;
+
+  const [byStatus, checkedIn] = await Promise.all([
+    prisma.registration.groupBy({
+      by: ["status"],
+      where: { tenantId, eventId: event.id },
+      _count: { _all: true },
+    }),
+    prisma.registration.count({
+      where: { tenantId, eventId: event.id, checkedInAt: { not: null } },
+    }),
+  ]);
+
+  const counted = (status: RegistrationStatus) =>
+    byStatus.find((row) => row.status === status)?._count._all ?? 0;
+
+  return {
+    id: event.id,
+    slug: event.slug,
+    title: event.title,
+    description: event.description,
+    startsAt: event.startsAt.toISOString(),
+    endsAt: event.endsAt ? event.endsAt.toISOString() : null,
+    timezone: event.timezone,
+    startsAtLocal: utcToZonedInput(event.startsAt, event.timezone),
+    endsAtLocal: event.endsAt ? utcToZonedInput(event.endsAt, event.timezone) : null,
+    capacity: event.capacity,
+    waitlistEnabled: event.waitlistEnabled,
+    status: event.status,
+    confirmed: counted("CONFIRMED"),
+    waitlist: counted("WAITLIST"),
+    checkedIn,
+    createdAt: event.createdAt.toISOString(),
+  };
+}
+
+/** A published event as the public sees it (#11, #12 in the contract). */
+export type PublicEventView = {
+  slug: string;
+  title: string;
+  description?: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  timezone: string;
+  capacity: number | null;
+  /** Seats left, or null when uncapped. */
+  remaining: number | null;
+  isFull: boolean;
+  waitlistEnabled: boolean;
+};
+
+function toPublicEvent(
+  event: {
+    slug: string;
+    title: string;
+    description: string | null;
+    startsAt: Date;
+    endsAt: Date | null;
+    timezone: string;
+    capacity: number | null;
+    waitlistEnabled: boolean;
+  },
+  confirmed: number,
+  withDescription: boolean,
+): PublicEventView {
+  const remaining = seatsRemaining(event.capacity, confirmed);
+  return {
+    slug: event.slug,
+    title: event.title,
+    ...(withDescription ? { description: event.description } : {}),
+    startsAt: event.startsAt.toISOString(),
+    endsAt: event.endsAt ? event.endsAt.toISOString() : null,
+    timezone: event.timezone,
+    capacity: event.capacity,
+    remaining,
+    isFull: remaining !== null && remaining <= 0,
+    waitlistEnabled: event.waitlistEnabled,
+  };
+}
+
+/**
+ * An organization's published events, soonest first.
+ *
+ * DRAFT and CLOSED are left out entirely rather than shown as unavailable: a
+ * draft is not public, and a closed one is over as far as a would-be attendee is
+ * concerned. The same rule the public web page applies.
+ */
+export async function publicEvents(tenantId: string): Promise<PublicEventView[]> {
+  const events = await prisma.event.findMany({
+    where: { tenantId, status: "PUBLISHED" },
+    orderBy: { startsAt: "asc" },
+  });
+
+  // One grouped count rather than one per event: this is the page an attendee
+  // lands on, and the database is a long way from the server.
+  const confirmed = await prisma.registration.groupBy({
+    by: ["eventId"],
+    where: { tenantId, status: "CONFIRMED" },
+    _count: { _all: true },
+  });
+  const byEvent = new Map(confirmed.map((row) => [row.eventId, row._count._all]));
+
+  return events.map((event) => toPublicEvent(event, byEvent.get(event.id) ?? 0, false));
+}
+
+/** One published event, with its description. Null for draft, closed or missing. */
+export async function publicEvent(
+  tenantId: string,
+  eventSlug: string,
+): Promise<PublicEventView | null> {
+  const event = await prisma.event.findFirst({
+    where: { tenantId, slug: eventSlug, status: "PUBLISHED" },
+  });
+  if (!event) return null;
+
+  const confirmed = await prisma.registration.count({
+    where: { tenantId, eventId: event.id, status: "CONFIRMED" },
+  });
+  return toPublicEvent(event, confirmed, true);
+}

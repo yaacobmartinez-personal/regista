@@ -1,11 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireMembership } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
 import { eventInputSchema, promoteFromWaitlist, uniqueEventSlug } from "@/lib/events";
+import { revalidateEventSurfaces } from "@/lib/event-surfaces";
 import type { EventFormState } from "./shared";
 
 /**
@@ -13,22 +13,6 @@ import type { EventFormState } from "./shared";
  * tenant slug in the form body simply fails the check. Reads and writes are then
  * scoped by that tenant id — never by event id alone.
  */
-
-/**
- * Refresh everywhere an event is visible.
- *
- * `revalidatePath` takes route-tree paths, i.e. the rewrite *destination* — so
- * the dashboard is `/app/o/...`, not the `/o/...` you see in the address bar.
- * Passing the visible path silently targeted a different route.
- *
- * Publishing or editing also changes the public pages, which were never being
- * refreshed at all: closing registrations left a working sign-up form up.
- */
-function revalidateEventSurfaces(tenantSlug: string, eventSlug?: string) {
-  revalidatePath(`/app/o/${tenantSlug}`);
-  revalidatePath(`/${tenantSlug}`);
-  if (eventSlug) revalidatePath(`/${tenantSlug}/${eventSlug}`);
-}
 
 function parseEventForm(formData: FormData) {
   return eventInputSchema.safeParse({

@@ -31,8 +31,10 @@ retain anything the organization has not asked for.
 | Event, capacity, times | No personal data | Until the organizer deletes the event | ✗ manual |
 | Verification token | Email address | 7 days after being used or expiring | ✓ `pruneExpiredRecords` |
 | Invitation | Email address | 7 days after being accepted or expiring | ✓ `pruneExpiredRecords` |
+| Password reset token | Email address, hashed token | Valid 1 hour; removed 7 days after being spent or expiring | ✓ `pruneExpiredRecords` |
 | Membership | Links a user to an organization | Until removed from the team | ✗ manual |
-| User account | Email, name, password hash | Until the account is deleted | ✗ not implemented |
+| User account | Email, name, password hash | Until the person closes it | ✗ manual, from the app |
+| Closed account | Anonymous row only | Kept indefinitely, so audit entries keep an actor | n/a |
 | Audit log | Identifiers and timestamps only, **no personal data** | Indefinite, deliberately | n/a |
 | Unverified organization | Name, chosen address | Released 24h after signup **if nothing was created under it** | ✓ on next claim |
 
@@ -84,7 +86,13 @@ Stated rather than glossed over.
 - **No age-based deletion of registrations.** An event five years past still has
   its guest list in full unless an organizer removes it. A configurable
   post-event window is the obvious next step.
-- **No account deletion.** A user account has no removal path in the product.
+- **Account closure is anonymization, not deletion.** `DELETE /api/mobile/account`
+  clears the email, name and password hash and drops every membership, but keeps
+  the row: an audit entry whose actor had vanished could no longer answer "who
+  checked this person in", which is the question the log exists for. The address
+  is replaced with a unique placeholder rather than nulled, so a closed account
+  cannot be found or re-invited by its old address. There is no path to this from
+  the web yet — only from the app.
 - **Backups and replication.** Erasure clears the live row. Point-in-time
   backups, write-ahead logs, and unvacuumed dead tuples retain earlier values
   until they age out. Erasure is not complete until a documented backup expiry
