@@ -40,3 +40,15 @@ services:
       # limiting reads the wrong address.
       - key: TRUSTED_PROXY_COUNT
         value: "1"
+      # Native app deep links (lib/app-links.ts). Both optional: without them
+      # assetlinks.json lists only the upload key and the Apple file is a 404.
+      #   ANDROID_CERT_SHA256 — Play's app-signing key fingerprint(s), comma-separated
+      #   APPLE_TEAM_ID       — ten characters, from the Apple Developer account
+      - key: ANDROID_CERT_SHA256
+        sync: false
+      - key: APPLE_TEAM_ID
+        sync: false
+      # Social sign-in (lib/social-auth.ts). Without GOOGLE_WEB_CLIENT_ID the
+      # Google endpoint answers 401; Apple needs only the bundle id (defaulted).
+      - key: GOOGLE_WEB_CLIENT_ID
+        sync: false

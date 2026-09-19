@@ -67,6 +67,11 @@ model User {
   /// the account out of every device at once (see lib/mobile-auth.ts). Web
   /// sessions are unaffected — those are NextAuth cookies.
   tokenVersion  Int       @default(0)
+  /// Stable subject ids from Google / Apple sign-in (API-CONTRACT #6, #7).
+  /// Matched before email, because an Apple relay address can change and a
+  /// Google account can be renamed; the sub never does.
+  googleSub     String?   @unique
+  appleSub      String?   @unique
   createdAt     DateTime  @default(now())
 
   memberships   Membership[]
