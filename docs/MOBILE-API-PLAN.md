@@ -5,9 +5,10 @@ waiting on this backend. Its `docs/API-CONTRACT.md` is the specification; this
 document is the plan for building it here, plus the corrections and decisions
 that contract needs before work starts.
 
-Status: **Phases 0–3 are built** (the foundation, the seven endpoints section 1
+Status: **Phases 0–4 are built** (the foundation, the seven endpoints section 1
 of the contract wrongly listed as already serving, the fields the app needs to
-run a door offline, and event CRUD). Phases 4–9 are still plan. Decisions taken since the first draft are marked **Decided** below.
+run a door offline, event CRUD, and the attendee-list actions). Phases 5–9 are
+still plan. Decisions taken since the first draft are marked **Decided** below.
 
 ---
 
@@ -131,7 +132,7 @@ independently shippable. Phase 1 is mandatory; everything after is a choice.
 | 1 ✓ | **The missing seven** — login, orgs, events, attendee list, check-in toggle, scan, close account | E1–E7 | *(ungated)* | none |
 | 2 ✓ | Offline scan support — `checkInToken` and `waitlist` on the attendee payload, `at` on check-in | #23, #24 | `offlineTokens` | none |
 | 3 ✓ | Event CRUD | #18–#22 | `eventCrud` | none |
-| 4 | Promote / erase / CSV export | #25–#27 | `promoteErase`, `csvExport` | none |
+| 4 ✓ | Promote / erase / CSV export | #25–#27 | `promoteErase`, `csvExport` | none |
 | 5 | Attendee mode — public reads, register, tickets | #8–#17 | `attendeeMode` | `Registration.userId` |
 | 6 | Signup, email verification, password reset | #1–#5 | `signup`, `passwordReset` | `PasswordResetToken` |
 | 7 | Org creation and team management | #28–#35 | `createOrg`, `team` | `CREATE_TENANT` audit |
@@ -309,3 +310,45 @@ Three things worth knowing about how it is put together:
   different client would get a silently cleaned address instead of that error.
   Pre-existing web behaviour, and it fails safe; flagged because the contract
   implies the messages match on every field, and here they do not.
+
+---
+
+## 12. Phase 4 — promote, erase, export
+
+Built: promote one waitlisted person (#25), erase a registrant's details (#26),
+and download the attendee CSV (#27). No migration.
+
+`promoteRegistration` and `eraseRegistration` were the two operations that lived
+only inside server actions, wrapped in `FormData` and `revalidatePath`. They are
+now `promoteWaitlisted` and `eraseRegistrationData` in `lib/attendees.ts`, taking
+the acting member's context and a registration id and knowing nothing about
+forms or caches. The dashboard actions call them and keep their behaviour
+exactly; the existing integration tests for the promote invariants still pass.
+
+The CSV body moved with them, as `attendeeCsv`. Both exports now build from the
+one function — the contract promises the same columns from both front ends, and
+a spreadsheet that changed shape depending on which one produced it would break
+whatever the organizer feeds it to.
+
+### Three things that differ, deliberately
+
+- **The export filename.** The contract specifies `<event-slug>-attendees.csv`
+  and that is what the API sends. The dashboard's own download names it from the
+  event *title* instead. Usually the same string, since the slug is derived from
+  the title, but they part company after a rename or a slug collision — so the
+  same event can download under two names depending on where you asked. Aligning
+  them is a one-line change either way; the contract decided the API's half.
+- **Promoting refreshes the public pages; the dashboard's control does not.**
+  Confirming someone changes the seats left on the public event page, so the API
+  revalidates it. The web's promote action only ever refreshed the attendee
+  list, which means a promotion made from the dashboard can leave the public
+  count stale — the same class of bug the event surfaces comment describes as
+  already fixed for publishing. Left alone rather than changed quietly, since it
+  is web behaviour and not this phase's remit. One line in
+  `attendees/actions.ts` when you want it.
+- **A missing registration id answers `200 {"outcome": "gone"}`, not 404.** That
+  is what the lifted code does and what the app's `PromoteOutcome` expects, and
+  it means a cross-tenant id is indistinguishable from a cancelled one. #25
+  lists 404 among its errors; in practice only the organization check produces
+  one. Erase does 404 a missing id, because `{ok: true}` there would claim an
+  erasure that never happened.

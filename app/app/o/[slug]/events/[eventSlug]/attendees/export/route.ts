@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireMembership } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
-import { toCsv, filenameSlug } from "@/lib/csv";
+import { filenameSlug } from "@/lib/csv";
+import { attendeeCsv } from "@/lib/attendees";
 
 /**
  * Download an event's attendee list.
@@ -24,21 +25,7 @@ export async function GET(
   });
   if (!event) return new NextResponse("Not found", { status: 404 });
 
-  const registrations = await prisma.registration.findMany({
-    where: { tenantId: ctx.tenant.id, eventId: event.id },
-    orderBy: { createdAt: "asc" },
-  });
-
-  const csv = toCsv(
-    ["Name", "Email", "Status", "Checked in", "Registered at"],
-    registrations.map((r) => [
-      r.anonymizedAt ? "(erased)" : r.name,
-      r.anonymizedAt ? "(erased)" : r.email,
-      r.status,
-      r.checkedInAt ? r.checkedInAt.toISOString() : "",
-      r.createdAt.toISOString(),
-    ]),
-  );
+  const csv = await attendeeCsv(ctx.tenant.id, event.id);
 
   await recordAudit({
     tenantId: ctx.tenant.id,

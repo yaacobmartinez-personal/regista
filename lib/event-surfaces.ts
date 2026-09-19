@@ -19,3 +19,14 @@ export function revalidateEventSurfaces(tenantSlug: string, eventSlug?: string) 
   revalidatePath(`/${tenantSlug}`);
   if (eventSlug) revalidatePath(`/${tenantSlug}/${eventSlug}`);
 }
+
+/**
+ * Refresh the dashboard's attendee list for one event.
+ *
+ * Its own path because promoting or erasing changes that page without changing
+ * anything an event surface shows — except when a promotion fills the last
+ * seat, which is why the caller for that one refreshes both.
+ */
+export function revalidateAttendeeList(tenantSlug: string, eventSlug: string) {
+  revalidatePath(`/app/o/${tenantSlug}/events/${eventSlug}/attendees`);
+}

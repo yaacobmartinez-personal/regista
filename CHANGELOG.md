@@ -28,6 +28,16 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
   scanning twice reports "already" rather than failing. Erased attendees still
   appear with their place intact and nothing identifying, and the placeholder
   address left behind by an erasure cannot be searched for.
+- **Managing the guest list from the app.** Organizers can now move someone off
+  the waitlist into a free place, erase a registrant's details when they ask to
+  be forgotten, and download the attendee list as a spreadsheet — all from the
+  phone, under the rules the dashboard already applies. Promoting past a full
+  event is still refused rather than quietly overriding the stated limit: raising
+  the capacity is what lets more people in, and it moves the queue up in order.
+  Erasing twice is not an error, so acting on a repeated request cannot fail.
+  The exported file marks erased rows without naming anyone, and a name typed to
+  look like a spreadsheet formula is still neutralised before it can run.
+
 - **Organizers can run their events from the app.** Creating, editing,
   publishing, closing and deleting an event all work from the phone now, under
   the same rules as the dashboard and with the same wording when something is
