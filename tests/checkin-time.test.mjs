@@ -1,9 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const { resolveDoorTime, CLOCK_SKEW_TOLERANCE_MS } = await import(
-  "../.test-build/lib/checkin-time.js"
-);
+const { resolveDoorTime, clampDoorTime, isImpossiblyAhead, CLOCK_SKEW_TOLERANCE_MS } =
+  await import("../.test-build/lib/checkin-time.js");
 
 /**
  * A check-in taken with no signal carries the phone's clock, and it is replayed
@@ -58,4 +57,36 @@ test("the tolerance is overridable, so the policy is not baked into callers", ()
     ok: false,
     reason: "future",
   });
+});
+
+/**
+ * The two halves are used apart as well as together: a scan is refused by its
+ * route, which knows only the clock, and bounded inside performCheckIn, which
+ * is the only place holding the registration. They must agree with the combined
+ * form or the two check-in paths would disagree about the same timestamp.
+ */
+
+test("the refusal half needs only the clock", () => {
+  assert.equal(isImpossiblyAhead(NOW + CLOCK_SKEW_TOLERANCE_MS, NOW), false);
+  assert.equal(isImpossiblyAhead(NOW + CLOCK_SKEW_TOLERANCE_MS + 1, NOW), true);
+  assert.equal(isImpossiblyAhead(NOW - 1, NOW), false);
+});
+
+test("the bounding half pulls a value into range", () => {
+  assert.equal(clampDoorTime(Date.parse("2026-09-01T17:30:00.000Z"), bounds), Date.parse("2026-09-01T17:30:00.000Z"));
+  assert.equal(clampDoorTime(Date.parse("2020-01-01T00:00:00.000Z"), bounds), SIGNUP);
+  assert.equal(clampDoorTime(NOW + 5000, bounds), NOW);
+});
+
+test("together they are exactly what the combined form does", () => {
+  for (const claimed of [
+    SIGNUP - 1, SIGNUP, NOW - 1, NOW, NOW + 1000,
+    NOW + CLOCK_SKEW_TOLERANCE_MS, NOW + CLOCK_SKEW_TOLERANCE_MS + 1,
+  ]) {
+    const combined = resolveDoorTime(claimed, bounds);
+    const apart = isImpossiblyAhead(claimed, bounds.nowMs)
+      ? { ok: false, reason: "future" }
+      : { ok: true, atMs: clampDoorTime(claimed, bounds) };
+    assert.deepEqual(combined, apart, `disagreed at ${claimed}`);
+  }
 });

@@ -3,7 +3,8 @@ import { prisma } from "@/lib/db";
 import { requireApiMembership } from "@/lib/api-auth";
 import { performCheckIn } from "@/lib/checkin";
 import { extractCheckInCode } from "@/lib/urls";
-import { readJson, route, validationFailed } from "@/lib/api-response";
+import { isImpossiblyAhead } from "@/lib/checkin-time";
+import { badRequest, readJson, route, validationFailed } from "@/lib/api-response";
 
 /**
  * E6 — check someone in from a scanned ticket.
@@ -17,18 +18,38 @@ import { readJson, route, validationFailed } from "@/lib/api-response";
  * lookup to it, so a ticket from another organization resolves to "invalid" with
  * nothing to say whether it exists — and it is idempotent, so the second scan of
  * the same code reports "already" rather than failing.
+ *
+ * `at` carries the real door time when a scan taken with no signal is replayed.
+ * The scanner is the busier of the two offline paths, so without it most of a
+ * queued door ends up stamped with the moment the signal came back. Refused when
+ * it is further ahead than a clock difference explains; otherwise bounded by the
+ * registration's sign-up time and now, inside `performCheckIn`.
  */
 
 const bodySchema = z.object({
   slug: z.string().trim().min(1, "Pick an organization."),
   code: z.string().trim().min(1, "Scan or enter a code."),
   eventSlug: z.string().trim().min(1).optional(),
+  at: z
+    .string()
+    .trim()
+    .refine((v) => Number.isFinite(Date.parse(v)), "That isn't a valid timestamp.")
+    .optional(),
 });
 
 export const POST = route(async (request: Request) => {
   const parsed = bodySchema.safeParse(await readJson(request));
   if (!parsed.success) throw validationFailed(parsed.error);
-  const { slug, code, eventSlug } = parsed.data;
+  const { slug, code, eventSlug, at } = parsed.data;
+
+  // Checked before the tenant lookup so an impossible clock is refused the same
+  // way whoever sent it; the lower bound needs the registration and is applied
+  // in performCheckIn.
+  if (at !== undefined && isImpossiblyAhead(Date.parse(at), Date.now())) {
+    throw badRequest("That check-in time is in the future.", {
+      fieldErrors: { at: "That check-in time is in the future." },
+    });
+  }
 
   const { tenant, userId } = await requireApiMembership(request, slug);
 
@@ -46,7 +67,10 @@ export const POST = route(async (request: Request) => {
   const result = await performCheckIn(
     { tenantId: tenant.id, userId },
     extractCheckInCode(code),
-    event ? { requireEventId: event.id } : {},
+    {
+      ...(event ? { requireEventId: event.id } : {}),
+      ...(at !== undefined ? { at: new Date(at) } : {}),
+    },
   );
 
   return Response.json({
