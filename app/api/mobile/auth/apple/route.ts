@@ -20,7 +20,13 @@ const bodySchema = z.object({
   identityToken: z.string().trim().min(1, "Missing Apple token."),
   nonce: z.string().trim().min(1, "Missing nonce."),
   authorizationCode: z.string().trim().optional(),
-  fullName: z.string().trim().max(120).optional(),
+  // Apple's shape, forwarded by the app as-is; joined server-side.
+  fullName: z
+    .object({
+      givenName: z.string().trim().max(60).optional(),
+      familyName: z.string().trim().max(60).optional(),
+    })
+    .optional(),
 });
 
 export const POST = route(async (request: Request) => {
@@ -34,7 +40,8 @@ export const POST = route(async (request: Request) => {
   }
 
   const payload = await verifyAppleIdentityToken(identityToken, nonce);
-  const identity = identityFromApple(payload, fullName?.length ? fullName : null);
+  const name = [fullName?.givenName, fullName?.familyName].filter((s) => s && s.length > 0).join(" ");
+  const identity = identityFromApple(payload, name.length > 0 ? name : null);
   const result = await signInWithIdentity(identity);
   return Response.json(result);
 });
