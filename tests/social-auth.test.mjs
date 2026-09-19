@@ -22,25 +22,30 @@ test("the nonce is compared as its SHA-256 hex digest", () => {
 });
 
 test("a Google payload becomes an identity with a lower-cased email", () => {
-  const id = identityFromGoogle({ sub: "g-1", email: "Ada@Example.com", email_verified: true, name: "Ada" });
-  assert.deepEqual(id, { provider: "google", sub: "g-1", email: "ada@example.com", emailVerified: true, name: "Ada" });
+  const r = identityFromGoogle({ sub: "g-1", email: "Ada@Example.com", email_verified: true, name: "Ada" });
+  assert.deepEqual(r, {
+    ok: true,
+    identity: { provider: "google", sub: "g-1", email: "ada@example.com", emailVerified: true, name: "Ada" },
+  });
 });
 
-test("a Google payload without an email is refused", () => {
-  assert.throws(() => identityFromGoogle({ sub: "g-1" }), (e) => e.status === 401);
+test("a Google payload without an email is refused as unreadable", () => {
+  assert.deepEqual(identityFromGoogle({ sub: "g-1" }), { ok: false, reason: "unreadable", provider: "google" });
 });
 
 test("an Apple payload takes the name from the request, not the token", () => {
-  const id = identityFromApple({ sub: "a-1", email: "relay@privaterelay.appleid.com", email_verified: "true" }, "Ada L");
-  assert.equal(id.name, "Ada L");
-  assert.equal(id.emailVerified, true);
+  const r = identityFromApple({ sub: "a-1", email: "relay@privaterelay.appleid.com", email_verified: "true" }, "Ada L");
+  assert.equal(r.ok, true);
+  assert.equal(r.identity.name, "Ada L");
+  assert.equal(r.identity.emailVerified, true);
 });
 
 test("an Apple payload with no email signals the revoke-and-retry remedy", () => {
-  assert.throws(
-    () => identityFromApple({ sub: "a-1" }, null),
-    (e) => e.status === 400 && e.body?.reason === "apple_identity_incomplete",
-  );
+  assert.deepEqual(identityFromApple({ sub: "a-1" }, null), { ok: false, reason: "apple_identity_incomplete" });
+});
+
+test("an Apple payload with no sub is unreadable", () => {
+  assert.deepEqual(identityFromApple({ email: "x@y" }, null), { ok: false, reason: "unreadable", provider: "apple" });
 });
 
 test("configuration comes from the environment with sensible absence", () => {

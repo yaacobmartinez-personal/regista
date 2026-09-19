@@ -1,11 +1,33 @@
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 import { prisma } from "@/lib/db";
 import { mintToken } from "@/lib/mobile-auth";
-import { forbidden, unauthorized } from "@/lib/api-response";
-import { appleBundleId, googleClientId, sha256Hex, type SocialIdentity } from "@/lib/social-identity";
+import { badRequest, forbidden, unauthorized } from "@/lib/api-response";
+import {
+  appleBundleId,
+  googleClientId,
+  identityFromApple as readApple,
+  identityFromGoogle as readGoogle,
+  sha256Hex,
+  type IdentityResult,
+  type ProviderClaims,
+  type SocialIdentity,
+} from "@/lib/social-identity";
 
-export { identityFromApple, identityFromGoogle } from "@/lib/social-identity";
 export type { Provider, SocialIdentity } from "@/lib/social-identity";
+
+/** A refusal from the pure layer, as the API reports it. */
+function unwrap(result: IdentityResult): SocialIdentity {
+  if (result.ok) return result.identity;
+  if (result.reason === "apple_identity_incomplete") {
+    throw badRequest("Apple did not share an email address.", { reason: "apple_identity_incomplete" });
+  }
+  const who = result.provider === "google" ? "Google" : "Apple";
+  throw unauthorized(`That ${who} sign-in could not be read.`);
+}
+
+export const identityFromGoogle = (payload: ProviderClaims): SocialIdentity => unwrap(readGoogle(payload));
+export const identityFromApple = (payload: ProviderClaims, fullName: string | null): SocialIdentity =>
+  unwrap(readApple(payload, fullName));
 
 /**
  * Google and Apple sign-in for the app (API-CONTRACT #6, #7).
