@@ -436,9 +436,15 @@ The palette lives in `app/globals.css`: values in `@theme` for light, overridden
 ## 8k. Tests
 
 ```bash
-pnpm test      # unit tests — no database needed
-pnpm test:db   # capacity race — needs pnpm db:up first
+pnpm test       # unit tests — no database needed
+pnpm test:db    # domain invariants against a real database — needs pnpm db:up
+pnpm build      # the API suite runs against a production build
+pnpm test:api   # the mobile API over HTTP — needs the build and the database
 ```
+
+All four run on every push and pull request
+([.github/workflows/ci.yml](../.github/workflows/ci.yml)), against a throwaway Postgres on
+the Node version the Render blueprint pins.
 
 **Why this setup and not Vitest.** Vitest and `tsx` both drive esbuild, which crashes in
 this environment (§8, and the troubleshooting table). `tsc` and `node:test` are already
@@ -447,8 +453,10 @@ same compiler the project type-checks with and runs `node --test` against the ou
 `tsconfig.test.json` lists what gets compiled.
 
 The consequence: **only import-free modules are unit-testable this way** — `lib/time.ts`,
-`lib/csv.ts`, `lib/slug.ts`. Anything importing Prisma or a path alias will not compile
-under that config. That constraint is part of why `lib/slug.ts` exists as its own module.
+`lib/csv.ts`, `lib/slug.ts`, `lib/urls.ts`, `lib/mobile-auth.ts`, `lib/api-response.ts`,
+`lib/checkin-time.ts`, `lib/event-input.ts`. Anything importing Prisma or a path alias will
+not compile under that config. That constraint is why several of those exist as their own
+modules: a policy worth asserting gets extracted until it can be.
 
 What is covered, and why these:
 
@@ -467,9 +475,20 @@ What is covered, and why these:
   never actually races, so the unlocked control has to oversell for the result to mean
   anything. Re-run this after touching that transaction.
 
-Not covered: anything needing Prisma, React rendering, or a browser. Those have been
-verified by hand and the evidence is in [AUDIT-FINDINGS.md](AUDIT-FINDINGS.md), but they are
-not regression-protected.
+- **Mobile API** (`pnpm test:api`) — boots a production build on a spare port, seeds its
+  own fixtures, and drives the endpoints over HTTP as the app does. It asserts the things
+  that are invisible in the type system and that a refactor can quietly undo: which
+  credentials get in (missing, forged, expired, revoked, naming a user who is gone), that
+  raising `tokenVersion` ends every session, that a non-member, an organization that does
+  not exist and an unconfirmed one answer with the **same body** so none can be told apart,
+  that a real registration id from another organization is indistinguishable from an
+  invented one, that signing up uses the account's address and not the request's, that a
+  forwarded confirmation link cannot attach someone else's place, and that drafts and
+  unconfirmed organizations never appear in a public read.
+
+Not covered: React rendering and anything needing a browser. Those have been verified by
+hand and the evidence is in [AUDIT-FINDINGS.md](AUDIT-FINDINGS.md), but they are not
+regression-protected.
 
 ## 9. Security & privacy (build-time requirements)
 

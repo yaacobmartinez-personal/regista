@@ -1,0 +1,73 @@
+# Checks that run on every push and pull request.
+#
+# The integration suites need a real Postgres, not a mock: what they assert —
+# the capacity row lock, check-in idempotency, and who the API lets through —
+# only exists at the database and over HTTP, so a fake would prove nothing.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: regista
+          POSTGRES_PASSWORD: regista
+          POSTGRES_DB: regista
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U regista -d regista"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://regista:regista@localhost:5432/regista
+      # Never a real secret: this runs against a throwaway database, and the
+      # API suite signs its own tokens with a key of its own anyway.
+      AUTH_SECRET: ci-placeholder-secret
+      NEXT_PUBLIC_ROOT_DOMAIN: localhost:3000
+      TRUSTED_PROXY_COUNT: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the NODE_VERSION the Render blueprint pins, so CI runs what
+          # production runs.
+          node-version: "20"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm prisma generate
+
+      # The same command the Render start script runs, so a migration that
+      # cannot be applied fails here rather than on a deploy.
+      - run: pnpm prisma migrate deploy
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      # Built once above; these run against that build rather than repeating it.
+      - name: Database integration tests
+        run: pnpm test:db
+
+      - name: API integration tests
+        run: node tests/api.integration.mjs
