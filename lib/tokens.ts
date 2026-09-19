@@ -7,6 +7,13 @@ export const VERIFICATION_TTL_HOURS = 24;
 export const INVITATION_TTL_HOURS = 168; // 7 days
 
 /**
+ * Hours a password reset link stays valid. Much shorter than the others: a
+ * verification link only confirms an address, while this one is a way into the
+ * account, so it should stop working long before anyone forgets it exists.
+ */
+export const PASSWORD_RESET_TTL_HOURS = 1;
+
+/**
  * Generate a URL-safe single-use token.
  *
  * Returns the raw value (emailed to the recipient, never stored) and its
@@ -45,4 +52,8 @@ export function verificationExpiry(): Date {
 
 export function invitationExpiry(): Date {
   return new Date(Date.now() + INVITATION_TTL_HOURS * 60 * 60 * 1000);
+}
+
+export function passwordResetExpiry(): Date {
+  return new Date(Date.now() + PASSWORD_RESET_TTL_HOURS * 60 * 60 * 1000);
 }

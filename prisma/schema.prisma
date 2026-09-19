@@ -191,6 +191,21 @@ model AuditLog {
   @@index([createdAt])
 }
 
+/// Password reset. Like VerificationToken, `token` stores a SHA-256 hash of the
+/// value emailed out, so a database leak cannot be replayed as a live link.
+/// Short-lived and single-use: a reset link is a way into an account, so it is
+/// held to a tighter window than a verification link, which only confirms one.
+model PasswordResetToken {
+  identifier String // the email address the link was sent to
+  token      String    @unique
+  expiresAt  DateTime
+  usedAt     DateTime? // single-use: set on redemption
+  createdAt  DateTime  @default(now())
+
+  @@id([identifier, token])
+  @@index([identifier])
+}
+
 // Owner email verification at signup (and future flows).
 // `token` stores a SHA-256 hash of the value emailed to the user, so a database
 // leak cannot be replayed as a verification link.

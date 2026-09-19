@@ -15,12 +15,16 @@ async function main() {
   const tokens = await prisma.verificationToken.deleteMany({
     where: { OR: [{ usedAt: { lt: cutoff } }, { expiresAt: { lt: cutoff } }] },
   });
+  const resets = await prisma.passwordResetToken.deleteMany({
+    where: { OR: [{ usedAt: { lt: cutoff } }, { expiresAt: { lt: cutoff } }] },
+  });
   const invitations = await prisma.invitation.deleteMany({
     where: { OR: [{ acceptedAt: { lt: cutoff } }, { expiresAt: { lt: cutoff } }] },
   });
 
   console.log(
-    `Pruned ${tokens.count} verification token(s) and ${invitations.count} invitation(s) older than ${TOKEN_GRACE_DAYS} days.`,
+    `Pruned ${tokens.count} verification token(s), ${resets.count} password reset token(s) ` +
+      `and ${invitations.count} invitation(s) older than ${TOKEN_GRACE_DAYS} days.`,
   );
 }
 

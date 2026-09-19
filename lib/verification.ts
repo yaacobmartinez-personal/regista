@@ -61,21 +61,30 @@ export async function inspectVerification(
 }
 
 /**
- * Redeem the token: activate the organization and mark the address confirmed.
+ * Redeem the token: mark the address confirmed, and activate the organization
+ * if the token came from an organization signup.
+ *
+ * Two kinds of token share this table. One is minted when somebody creates an
+ * organization on the web and carries its `tenantId`; the other is minted when
+ * somebody creates a personal account in the app and carries none. Both confirm
+ * an address; only the first has anything to activate.
  *
  * The token is claimed with a conditional update inside the transaction, so two
  * simultaneous redemptions produce one activation rather than racing.
  */
-export async function redeemVerification(
-  rawToken: string,
-): Promise<{ tenantName: string; tenantSlug: string } | null> {
+export async function redeemVerification(rawToken: string): Promise<{
+  userId: string;
+  email: string;
+  /** The organization this signup created, or null for a personal account. */
+  tenant: { name: string; slug: string } | null;
+} | null> {
   const tokenHash = hashToken(rawToken);
 
   return prisma.$transaction(async (tx) => {
     const record = await tx.verificationToken.findUnique({
       where: { token: tokenHash },
     });
-    if (!record?.tenantId) return null;
+    if (!record) return null;
     if (record.expiresAt.getTime() <= Date.now()) return null;
 
     const claimed = await tx.verificationToken.updateMany({
@@ -84,17 +93,27 @@ export async function redeemVerification(
     });
     if (claimed.count === 0) return null; // someone else got here first
 
-    const tenant = await tx.tenant.update({
-      where: { id: record.tenantId },
-      data: { status: "ACTIVE" },
-      select: { name: true, slug: true },
-    });
+    const tenant = record.tenantId
+      ? await tx.tenant.update({
+          where: { id: record.tenantId },
+          data: { status: "ACTIVE" },
+          select: { name: true, slug: true },
+        })
+      : null;
 
     await tx.user.updateMany({
       where: { email: record.identifier, emailVerified: null },
       data: { emailVerified: new Date() },
     });
 
-    return { tenantName: tenant.name, tenantSlug: tenant.slug };
+    // Read back rather than trusting the token's identifier: the address is what
+    // was just confirmed, and the caller needs the account it belongs to.
+    const user = await tx.user.findUnique({
+      where: { email: record.identifier },
+      select: { id: true, email: true },
+    });
+    if (!user) return null;
+
+    return { userId: user.id, email: user.email, tenant };
   });
 }

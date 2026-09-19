@@ -31,6 +31,7 @@ retain anything the organization has not asked for.
 | Event, capacity, times | No personal data | Until the organizer deletes the event | ✗ manual |
 | Verification token | Email address | 7 days after being used or expiring | ✓ `pruneExpiredRecords` |
 | Invitation | Email address | 7 days after being accepted or expiring | ✓ `pruneExpiredRecords` |
+| Password reset token | Email address, hashed token | Valid 1 hour; removed 7 days after being spent or expiring | ✓ `pruneExpiredRecords` |
 | Membership | Links a user to an organization | Until removed from the team | ✗ manual |
 | User account | Email, name, password hash | Until the person closes it | ✗ manual, from the app |
 | Closed account | Anonymous row only | Kept indefinitely, so audit entries keep an actor | n/a |

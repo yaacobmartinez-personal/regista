@@ -69,8 +69,15 @@ const EMAIL = {
   rival: `${P}rival@example.test`,
   attendee: `${P}attendee@example.test`,
   stranger: `${P}stranger@example.test`,
+  unconfirmed: `${P}unconfirmed@example.test`,
+  fresh: `${P}fresh@example.test`,
+  resettable: `${P}resettable@example.test`,
 };
 const RAW_STRANGER_TOKEN = randomBytes(16).toString("base64url");
+const RAW_VERIFY_TOKEN = randomBytes(16).toString("base64url");
+const RAW_RESET_TOKEN = randomBytes(16).toString("base64url");
+const RAW_SECOND_RESET_TOKEN = randomBytes(16).toString("base64url");
+const sha256 = (v) => createHash("sha256").update(v).digest("hex");
 
 async function seed() {
   // Order matters: audit logs restrict tenant deletes, so they go first.
@@ -84,11 +91,33 @@ async function seed() {
   await prisma.event.deleteMany({ where: { tenantId: { in: tenantIds } } });
   await prisma.membership.deleteMany({ where: { tenantId: { in: tenantIds } } });
   await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
+  await prisma.verificationToken.deleteMany({ where: { identifier: { startsWith: P } } });
+  await prisma.passwordResetToken.deleteMany({ where: { identifier: { startsWith: P } } });
   await prisma.user.deleteMany({ where: { email: { startsWith: P } } });
 
   const passwordHash = await hash(PASSWORD);
   const user = (email, name) =>
     prisma.user.create({ data: { email, name, passwordHash, emailVerified: new Date() } });
+
+  // Signed up but never confirmed: cannot sign in, and its address is claimable.
+  await prisma.user.create({
+    data: { email: EMAIL.unconfirmed, name: "Api Unconfirmed", passwordHash },
+  });
+  await prisma.verificationToken.create({
+    data: {
+      identifier: EMAIL.unconfirmed,
+      token: sha256(RAW_VERIFY_TOKEN),
+      tenantId: null, // a personal account: nothing to activate
+      expiresAt: new Date(Date.now() + 864e5),
+    },
+  });
+  await prisma.passwordResetToken.createMany({
+    data: [
+      { identifier: EMAIL.resettable, token: sha256(RAW_RESET_TOKEN), expiresAt: new Date(Date.now() + 36e5) },
+      // A second outstanding link for the same account: spending one must kill it.
+      { identifier: EMAIL.resettable, token: sha256(RAW_SECOND_RESET_TOKEN), expiresAt: new Date(Date.now() + 36e5) },
+    ],
+  });
 
   const [admin, staff, rival, attendee, stranger] = await Promise.all([
     user(EMAIL.admin, "Api Admin"),
@@ -96,6 +125,7 @@ async function seed() {
     user(EMAIL.rival, "Api Rival"),
     user(EMAIL.attendee, "Api Attendee"),
     user(EMAIL.stranger, "Api Stranger"),
+    user(EMAIL.resettable, "Api Resettable"),
   ]);
 
   const home = await prisma.tenant.create({
@@ -372,6 +402,118 @@ async function run() {
     "seats left reflect the sign-up that just happened",
     (await req("GET", `/public/orgs/${P}home/events/open-event`)).body.event.remaining,
     3,
+  );
+
+  console.log("\nsigning up says the same thing about every address");
+  const freshSignup = await req("POST", "/mobile/auth/signup", {
+    body: { email: EMAIL.fresh, password: "a-good-password", name: "Api Fresh" },
+  });
+  const takenSignup = await req("POST", "/mobile/auth/signup", {
+    body: { email: EMAIL.admin, password: "a-good-password", name: "Not The Admin" },
+  });
+  const claimableSignup = await req("POST", "/mobile/auth/signup", {
+    body: { email: EMAIL.unconfirmed, password: "a-good-password", name: "Api Unconfirmed" },
+  });
+  check("a new address is accepted", [freshSignup.status, freshSignup.body], [200, { ok: true }]);
+  // No mail provider is configured here, which is how the deployment runs until
+  // a sending domain is verified — and sendEmail throws rather than logging in
+  // production. Signup must survive that: the account exists, and resending is
+  // the way back to it.
+  check(
+    "...even with no mail provider to send the confirmation",
+    (await prisma.user.count({ where: { email: EMAIL.fresh } })),
+    1,
+  );
+  check("a new account gets no organization", (await prisma.membership.count({
+    where: { user: { email: EMAIL.fresh } },
+  })), 0);
+  check(
+    "an address that already has a confirmed account answers identically",
+    [takenSignup.status, takenSignup.body],
+    [200, { ok: true }],
+  );
+  check(
+    "so does one that was signed up for but never confirmed",
+    [claimableSignup.status, claimableSignup.body],
+    [200, { ok: true }],
+  );
+  check(
+    "the confirmed account's password was not overwritten",
+    (await req("POST", "/mobile/auth/login", { body: { email: EMAIL.admin, password: PASSWORD } })).status,
+    200,
+  );
+
+  console.log("\nconfirming an address");
+  check(
+    "an unconfirmed account cannot sign in",
+    (await req("POST", "/mobile/auth/login", { body: { email: EMAIL.unconfirmed, password: PASSWORD } })).status,
+    401,
+  );
+  const verified = await req("POST", "/mobile/auth/verify", { body: { token: RAW_VERIFY_TOKEN } });
+  check("the link confirms it and signs them in", verified.status, 200);
+  check("...as the right account", verified.body.user.email, EMAIL.unconfirmed);
+  check(
+    "the token it hands back works",
+    (await req("GET", "/mobile/me", { token: verified.body.token })).status,
+    200,
+  );
+  check(
+    "...and reports the address as confirmed",
+    (await req("GET", "/mobile/me", { token: verified.body.token })).body.user.emailVerified,
+    true,
+  );
+  check(
+    "the link cannot be spent twice",
+    (await req("POST", "/mobile/auth/verify", { body: { token: RAW_VERIFY_TOKEN } })).status,
+    400,
+  );
+
+  console.log("\nasking for a password reset tells you nothing");
+  const knownAddress = await req("POST", "/mobile/auth/forgot-password", { body: { email: EMAIL.resettable } });
+  const unknownAddress = await req("POST", "/mobile/auth/forgot-password", { body: { email: `${P}nobody@example.test` } });
+  check("a known address is accepted", [knownAddress.status, knownAddress.body], [200, { ok: true }]);
+  check(
+    "an address with no account answers exactly the same",
+    [unknownAddress.status, unknownAddress.body],
+    [200, { ok: true }],
+  );
+
+  console.log("\nresetting a password ends every other session");
+  const beforeReset = await login(EMAIL.resettable);
+  check("the old password works beforehand", (await req("GET", "/mobile/me", { token: beforeReset })).status, 200);
+  const reset = await req("POST", "/mobile/auth/reset-password", {
+    body: { token: RAW_RESET_TOKEN, password: "a-brand-new-password" },
+  });
+  check("the link sets the new password and signs in", reset.status, 200);
+  check(
+    "the session it hands back works",
+    (await req("GET", "/mobile/me", { token: reset.body.token })).status,
+    200,
+  );
+  check(
+    "the session held before the reset does not",
+    (await req("GET", "/mobile/me", { token: beforeReset })).status,
+    401,
+  );
+  check(
+    "the new password signs in",
+    (await req("POST", "/mobile/auth/login", { body: { email: EMAIL.resettable, password: "a-brand-new-password" } })).status,
+    200,
+  );
+  check(
+    "the old one does not",
+    (await req("POST", "/mobile/auth/login", { body: { email: EMAIL.resettable, password: PASSWORD } })).status,
+    401,
+  );
+  check(
+    "the spent link cannot be reused",
+    (await req("POST", "/mobile/auth/reset-password", { body: { token: RAW_RESET_TOKEN, password: "another-one-entirely" } })).status,
+    400,
+  );
+  check(
+    "and the other link outstanding for that account is dead too",
+    (await req("POST", "/mobile/auth/reset-password", { body: { token: RAW_SECOND_RESET_TOKEN, password: "another-one-entirely" } })).status,
+    400,
   );
 
   console.log("\nthe export carries personal data, and says so");

@@ -18,7 +18,9 @@ export async function confirmVerification(
   if (!token) return { error: "This link is no longer valid." };
 
   const result = await redeemVerification(token);
-  if (!result) return { error: "This link is no longer valid." };
+  // A token with no organization behind it belongs to a personal account
+  // created in the app, which this page has nothing to show for.
+  if (!result?.tenant) return { error: "This link is no longer valid." };
 
-  return { confirmed: result };
+  return { confirmed: { tenantName: result.tenant.name, tenantSlug: result.tenant.slug } };
 }

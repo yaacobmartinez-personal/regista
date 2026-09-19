@@ -97,3 +97,17 @@ export function extractCheckInCode(raw: string): string {
   }
 }
 
+/**
+ * Where someone chooses a new password. On the dashboard host because that is
+ * where signing in happens, and the page is reachable without the app — a reset
+ * has to work for someone who only ever uses the website.
+ */
+export function passwordResetUrl(rawToken: string): string {
+  return `${appOrigin()}/reset?token=${encodeURIComponent(rawToken)}`;
+}
+
+/** Where someone confirms the address on a personal account. */
+export function verifyAccountUrl(rawToken: string): string {
+  return `${appOrigin()}/verify?token=${encodeURIComponent(rawToken)}`;
+}
+

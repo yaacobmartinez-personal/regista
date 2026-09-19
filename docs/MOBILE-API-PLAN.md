@@ -5,10 +5,8 @@ waiting on this backend. Its `docs/API-CONTRACT.md` is the specification; this
 document is the plan for building it here, plus the corrections and decisions
 that contract needs before work starts.
 
-Status: **Phases 0–5 are built** — the foundation, the seven endpoints section 1
-of the contract wrongly listed as already serving, the fields the app needs to
-run a door offline, event CRUD, the attendee-list actions, and attendee mode.
-Phases 6–9 are still plan. Decisions taken since the first draft are marked **Decided** below.
+Status: **Phases 0–6 are built**, and every suite runs in CI. Phases 7–9 are
+still plan; 8 and 9 are blocked on values and consoles outside this repository. Decisions taken since the first draft are marked **Decided** below.
 
 ---
 
@@ -74,7 +72,7 @@ noted under "Contract corrections" below.
 | Phase | Change | For |
 |---|---|---|
 | **5 ✓** | `Registration.userId String?` + `@@index([userId])`, `onDelete: SetNull` | Tickets belong to an account (#13–#17) |
-| 6 | `PasswordResetToken` model (hashed token, 1 h TTL, single-use) | Password reset (#4, #5) — **the web has no reset flow at all today** |
+| **6 ✓** | `PasswordResetToken` model (hashed token, 1 h TTL, single-use) | Password reset (#4, #5) — the web had no reset flow at all; it does now |
 | 8 | `User.googleSub String? @unique`, `User.appleSub String? @unique` | Social sign-in (#6, #7) |
 | 7 | New `AuditAction` value `CREATE_TENANT` | Org creation (#35) |
 | **0 ✓** | `Tenant.plan` (`PlanTier` = FREE/PREMIUM/CUSTOM, default FREE) | `Org.plan` in the contract |
@@ -134,7 +132,7 @@ independently shippable. Phase 1 is mandatory; everything after is a choice.
 | 3 ✓ | Event CRUD | #18–#22 | `eventCrud` | none |
 | 4 ✓ | Promote / erase / CSV export | #25–#27 | `promoteErase`, `csvExport` | none |
 | 5 ✓ | Attendee mode — public reads, register, tickets | #8–#17 | `attendeeMode` | `Registration.userId` |
-| 6 | Signup, email verification, password reset | #1–#5 | `signup`, `passwordReset` | `PasswordResetToken` |
+| 6 ✓ | Signup, email verification, password reset | #1–#5 | `signup`, `passwordReset` | `PasswordResetToken` |
 | 7 | Org creation and team management | #28–#35 | `createOrg`, `team` | `CREATE_TENANT` audit |
 | 8 | Google and Apple sign-in | #6, #7 | `socialSignIn` | `googleSub`, `appleSub` |
 | 9 | Deep-link hosting — `assetlinks.json`, `apple-app-site-association` | §3 | — | none |
@@ -406,3 +404,54 @@ lock while its unlocked control oversells to 9.
   registration survives for the organizer's counts but no longer describes a
   person, and a suspended organization's pages are not served — so neither
   appears in a ticket list.
+
+---
+
+## 14. Phase 6 — accounts, confirmation, password reset
+
+Built: signing up for a personal account (#1), confirming an address and being
+signed in by it (#2), resending that confirmation (#3), and the password reset
+the product has never had (#4, #5).
+
+Two things here are new to the product rather than new to the API.
+
+**An account with no organization.** Web signup has only ever created one as a
+side effect of creating an organization. `signupAccount` creates a bare account
+and mints a `VerificationToken` with a null `tenantId`; `redeemVerification` now
+handles both kinds, activating an organization when the token names one and
+confirming the address either way. The web's `/verify` page rejects a token with
+no organization behind it, since it has nothing to show for one.
+
+**A password reset, on the web as well as in the app.** The contract asks for a
+page at `app.<root>/reset?token=` "for users without the app" — but a page to
+*spend* a link is no use to someone with no way to *request* one, so `/forgot`
+is there too, linked from the sign-in form. That is slightly more than the
+contract specifies and the reason is in the contract's own sentence.
+
+### Decisions worth knowing
+
+- **Every one of these endpoints answers the same way whatever the address.**
+  Signing up with a free address, one that already has a confirmed account, and
+  one signed up for but never confirmed all return `{ok: true}`; forgot-password
+  answers identically for an address with no account. The reply reaches whoever
+  typed the address, not whoever owns it, so any difference is a way to test
+  addresses against the user table. Asserted, byte for byte, in the API suite.
+- **An unconfirmed account stays claimable, a confirmed one does not.** The rule
+  the web signup already applies: nobody has proven control of an unconfirmed
+  address, so the password on it has no owner. A confirmed account keeps its
+  password no matter who signs up with its address.
+- **A reset ends every other session.** It spends every other outstanding link
+  for the account, confirms the address if it was not already — receiving the
+  link proves the same thing verification asks for — and raises `tokenVersion`,
+  which signs out every device. Someone resetting a password usually believes an
+  account is compromised, so leaving old sessions alive would be a surprise.
+- **Signup survives a missing mail provider.** `sendEmail` *throws* rather than
+  logging when `RESEND_API_KEY` is unset in production, which is how the
+  deployment runs until a sending domain is verified. The first version of
+  `signupAccount` awaited it uncaught, so signup would have returned 500 on the
+  live site while quietly creating the account — and a retry would have failed
+  the same way. The send is now wrapped, as the web signup's already was, and
+  the API suite covers it.
+- **Reset tokens are pruned.** They hold an email address, so they join
+  `pruneExpiredRecords` and `pnpm db:prune` alongside verification tokens and
+  invitations, and the retention table records them.

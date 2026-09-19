@@ -28,6 +28,21 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
   scanning twice reports "already" rather than failing. Erased attendees still
   appear with their place intact and nothing identifying, and the placeholder
   address left behind by an erasure cannot be searched for.
+- **Anyone can make an account, and forgotten passwords are recoverable.**
+  Signing up in the app creates a personal account with no organization attached
+  — until now an account only ever existed alongside one — and the confirmation
+  email says what it actually does rather than talking about activating an
+  organization you do not have. Confirming the address signs you straight in, on
+  whichever device opened the link.
+
+  **Password reset now exists at all**, which it did not before. Ask from the
+  app or from the sign-in page, follow the link, choose a new password. Setting
+  one signs you out everywhere else and quietly ends every other reset link
+  outstanding for the account — if you are resetting because you think somebody
+  else has been in, that is the point. The link lasts an hour and works once.
+  None of these screens will tell you whether an address has an account, so
+  nobody can use them to find out.
+
 - **Attendees can use the app too.** Someone with an account can browse an
   organization's published events, take a place, and keep their tickets in one
   list instead of digging through email — each with the QR to show at the door.
