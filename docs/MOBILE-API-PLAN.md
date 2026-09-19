@@ -1,0 +1,179 @@
+# Mobile API — implementation plan
+
+The Flutter app in the sibling `thingstead-mobile` repository is built and
+waiting on this backend. Its `docs/API-CONTRACT.md` is the specification; this
+document is the plan for building it here, plus the corrections and decisions
+that contract needs before work starts.
+
+Status: **plan, not yet implemented.** Nothing below is built.
+
+---
+
+## 0. Correction: nothing exists yet
+
+The contract's section 1 lists seven endpoints as "real today" and cites
+`regista/app/api/mobile/**` and `regista/lib/mobile-auth.ts`.
+
+**Neither path exists on any branch of this repository.** Verified against
+`origin/master` and every remote ref. The app's `server_url.dart` likewise cites
+`regista/mobile/src/config.ts`, which also does not exist. The only route
+handlers here are NextAuth's (`app/api/auth/[...nextauth]/route.ts`) and the web
+CSV export.
+
+Consequences:
+
+- The work is **42 endpoints, not 35**. Section 1 (E1–E7) is Phase 1 below.
+- The app cannot currently do anything against a real server. Every flag in
+  `feature_availability.dart` is `false`, so `API_MODE=real` shows only the login
+  screen — and `POST /mobile/auth/login` is itself one of the missing seven.
+- `login` and `deleteAccount` are the only calls with no feature-flag guard, so
+  they hit the network the moment a real build starts. They must ship first.
+
+Section 2 of the contract is sound and is followed as written, except where
+noted under "Contract corrections" below.
+
+---
+
+## 1. What already helps
+
+- **Routing needs no change.** `proxy.ts`'s matcher excludes `api`, so
+  `/api/**` bypasses host rewriting and resolves straight to `app/api/**` on
+  both the apex and `app.`. Pick one canonical base URL for the app and leave
+  the proxy alone.
+- **The domain layer is reusable.** `lib/checkin.ts`, `lib/events.ts`,
+  `lib/registrations.ts`, `lib/invitations.ts`, `lib/tenant.ts`, `lib/slug.ts`,
+  `lib/time.ts`, `lib/csv.ts` and `lib/audit.ts` are transport-agnostic and take
+  plain arguments. `performCheckIn`, `promoteFromWaitlist`, `eventInputSchema`,
+  `uniqueEventSlug`, `slugAvailability`, `utcToZonedInput` and
+  `inspectRegistration` are all directly callable from a route handler.
+- **Route handlers are uncached by default** in Next 16, which is what an API
+  wants. No `dynamic` config needed.
+
+## 2. What blocks reuse
+
+- **`requireMembership()` throws navigation.** `lib/authz.ts:41` calls
+  `redirect("/login")` and `notFound()`. An API needs a status code and a JSON
+  body, so it needs a sibling that returns a discriminated result instead of
+  throwing. The web function stays as is.
+- **Four operations live only in server actions**, not in `lib/`, and are
+  wrapped in `FormData` parsing and `revalidatePath`:
+  `promoteRegistration` and `eraseRegistration`
+  (`app/app/o/[slug]/events/[eventSlug]/attendees/actions.ts`), the register
+  transaction (`app/[domain]/[eventSlug]/actions.tsx`), and `inviteMember` /
+  role and membership changes (`app/app/o/[slug]/team/actions.tsx`). Each must
+  be lifted into `lib/` as a plain function that both the action and the route
+  handler call. The web behaviour must not change.
+- **`withLastAdminGuard` does not exist** as an exported symbol; the last-admin
+  rule is inline in the team actions. It needs extracting with the rest.
+
+## 3. Schema migrations required
+
+| Phase | Change | For |
+|---|---|---|
+| 5 | `Registration.userId String?` + `@@index([userId])` | Tickets belong to an account (#13–#17) |
+| 6 | `PasswordResetToken` model (hashed token, 1 h TTL, single-use) | Password reset (#4, #5) — **the web has no reset flow at all today** |
+| 8 | `User.googleSub String? @unique`, `User.appleSub String? @unique` | Social sign-in (#6, #7) |
+| 7 | New `AuditAction` value `CREATE_TENANT` | Org creation (#35) |
+| — | `Tenant.plan` — **see below** | `Org.plan` in the contract |
+
+`Tenant.plan` does not exist and there is no plan/billing concept anywhere in
+the product. The Dart `Org` model defaults it (`@Default(PlanTier.free)`), so
+**the server can omit the field entirely** and the app reads `FREE`.
+Recommendation: omit it, and do not add a billing column until there is a
+billing feature. The contract should drop `plan` from the `Org` shape.
+
+## 4. Foundation to build first (Phase 0)
+
+Three new modules, all under `lib/`:
+
+**`lib/mobile-auth.ts`**
+- `mintToken(userId)` → `base64url(JSON{sub, exp}) + "." + base64url(HMAC-SHA256(body, AUTH_SECRET))`, 30-day TTL.
+- `verifyToken(raw)` → `{ sub }` or null. Constant-time signature compare.
+- **`exp` is milliseconds since the epoch, not seconds.** `token_codec.dart`
+  does `DateTime.fromMillisecondsSinceEpoch(exp)`; seconds would read as 1970 and
+  the app would treat every token as expired and never send it.
+- Identity only. Membership and role are resolved from the database per request,
+  exactly as `lib/authz.ts` already does for the web.
+
+**`lib/api-auth.ts`** — the non-throwing authz layer.
+- `requireApiUser(req)` → `{ userId }` or a 401 response.
+- `requireApiMembership(req, slug, minRole?)` → `TenantContext` or a response.
+- Returns **403 uniformly** for "not a member", "insufficient role", "tenant not
+  ACTIVE" *and* "tenant does not exist", per the contract. The uniformity is what
+  prevents enumeration — this deliberately differs from the web, which 404s.
+
+**`lib/api-response.ts`** — one place for the wire format.
+- `{ error: string }`, optional `fieldErrors` and `reason`.
+- A zod-error → `fieldErrors` mapper, producing the same messages the web
+  server-action states already produce.
+- Status vocabulary fixed by the contract: 400 / 401 / 403 / 404 / 409 / 429.
+
+Rate limiting reuses `lib/rate-limit.ts` and `clientIp()` unchanged.
+
+Next 16 specifics for every handler: files are `app/api/**/route.ts`; `params`
+is a Promise (`const { slug } = await ctx.params`); type context with the global
+`RouteContext<'/api/mobile/orgs/[slug]'>` helper.
+
+## 5. Phases
+
+Ordered so each one flips a flag in `feature_availability.dart` and is
+independently shippable. Phase 1 is mandatory; everything after is a choice.
+
+| # | Phase | Contract items | Flag | Schema |
+|---|---|---|---|---|
+| 0 | Foundation | — | — | none |
+| 1 | **The missing seven** — login, orgs, events, attendee list, check-in toggle, scan, delete account | E1–E7 | *(ungated)* | none |
+| 2 | Offline scan support — `checkInToken` and `waitlist` on the attendee payload, `at` on check-in | #23, #24 | `offlineTokens` | none |
+| 3 | Event CRUD | #18–#22 | `eventCrud` | none |
+| 4 | Promote / erase / CSV export | #25–#27 | `promoteErase`, `csvExport` | none |
+| 5 | Attendee mode — public reads, register, tickets | #8–#17 | `attendeeMode` | `Registration.userId` |
+| 6 | Signup, email verification, password reset | #1–#5 | `signup`, `passwordReset` | `PasswordResetToken` |
+| 7 | Org creation and team management | #28–#35 | `createOrg`, `team` | `CREATE_TENANT` audit |
+| 8 | Google and Apple sign-in | #6, #7 | `socialSignIn` | `googleSub`, `appleSub` |
+| 9 | Deep-link hosting — `assetlinks.json`, `apple-app-site-association` | §3 | — | none |
+
+Phases 1–4 are pure reuse of existing logic and add no new product concepts.
+Phase 5 introduces account-owned registrations. Phase 6 introduces a user with
+no tenant, which the web signup has never produced. Phase 8 carries the most
+external risk (Apple/Google console config, JWKS verification, a test device).
+
+Phase 9 needs values only the user has: the SHA-256 of both the upload key and
+the Play App Signing key, and the Apple Team ID.
+
+## 6. Contract corrections needed
+
+1. Section 1 is not implemented — retitle it as work, not history.
+2. Drop `plan` from the `Org` shape, or add a `Tenant.plan` column deliberately.
+3. State that `exp` is milliseconds.
+4. `501` for unshipped endpoints never happens: the app's `_require()` throws
+   client-side before any request, and an unimplemented Next route returns 404.
+   Harmless, but the contract should not promise it.
+
+## 7. Risks
+
+- **No token revocation.** A 30-day token cannot be invalidated — not by signing
+  out, and not by `DELETE /mobile/account`. A leaked token stays valid for its
+  full life. Mitigation if wanted: a `User.tokenVersion` integer included in the
+  payload and compared per request; bumping it invalidates every token.
+- **Rate limits are weaker than they look.** `lib/rate-limit.ts` is in-process
+  memory, and the Render free plan sleeps after ~15 minutes idle, so counters
+  reset on every cold start. The login limit (10/15 min) is the one that matters;
+  a shared store is worth it before the app is public.
+- **AUTH_SECRET is shared with NextAuth.** Works, but a separate
+  `MOBILE_TOKEN_SECRET` means rotating one does not sign every web user out.
+- **DB latency.** The Render service runs in Oregon while the Neon database is
+  in `ap-southeast-1` (see the region note in `render.yaml` — the blueprint says
+  Singapore but the live service was created in Oregon and Render cannot move
+  it). Every endpoint here pays a cross-Pacific round trip per query, and mobile
+  users are likely in APAC. Worth fixing before the app ships.
+- **Security headers apply to `/api`.** `next.config.ts` sends the CSP and frame
+  headers on `/:path*`. Harmless for a native client, but consider scoping them
+  to non-API paths so JSON responses are not carrying a page policy.
+
+## 8. Testing
+
+Follows the existing split: `node --test` units under `tests/` for the token
+codec and the zod→`fieldErrors` mapper, and `*.integration.mjs` against a real
+database for the authz matrix (non-member, wrong role, inactive tenant) and the
+check-in and registration races, which already have integration coverage to
+extend.
