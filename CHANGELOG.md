@@ -86,6 +86,13 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
   every registration under it. An event published from the app appears on the
   public site immediately, as one published from the dashboard does.
 
+- **A scanned ticket keeps the time it was scanned.** Checking someone in by
+  scanning their code now records the moment it happened, even when the scan was
+  taken with no signal and sent an hour later — the manual control could already
+  do this, and the scanner is the one people actually use at a door. A time from
+  a badly wrong clock is still refused, and one a few seconds out is simply
+  treated as now.
+
 - **Running a door with no signal.** The attendee list the app caches now carries
   each ticket's check-in code and the event's waitlist count, so a scanner with
   no connection can recognise a ticket and say who it belongs to — and give the

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { recordAudit } from "@/lib/audit";
+import { clampDoorTime } from "@/lib/checkin-time";
 
 /**
  * Check-in by QR ticket.
@@ -15,6 +16,8 @@ export type CheckInView = {
   name: string | null;
   status: "CONFIRMED" | "WAITLIST" | "CANCELLED";
   checkedInAt: Date | null;
+  /** Sign-up time — the floor a claimed door time is pulled up to. */
+  createdAt: Date;
   tenantId: string;
   tenantSlug: string;
   tenantName: string;
@@ -40,6 +43,7 @@ export async function inspectCheckIn(
       name: true,
       status: true,
       checkedInAt: true,
+      createdAt: true,
       anonymizedAt: true,
       tenant: { select: { id: true, slug: true, name: true, status: true } },
       event: { select: { id: true, slug: true, title: true } },
@@ -54,6 +58,7 @@ export async function inspectCheckIn(
     name: r.name,
     status: r.status,
     checkedInAt: r.checkedInAt,
+    createdAt: r.createdAt,
     tenantId: r.tenant.id,
     tenantSlug: r.tenant.slug,
     tenantName: r.tenant.name,
@@ -88,12 +93,18 @@ export type CheckInResult = {
  * event, turning a stray ticket into a clear "wrong event" rather than a silent
  * check-in elsewhere.
  *
+ * `at` is the real door time when a scan taken with no signal is replayed later.
+ * Without it a queue drained an hour after the doors closed records everyone as
+ * arriving at once. It is bounded by the registration's own sign-up time and by
+ * now, because a phone's clock is the only source for it; the caller refuses an
+ * impossibly future one before getting here.
+ *
  * Idempotent: scanning the same code twice reports "already", it does not error.
  */
 export async function performCheckIn(
   acting: { tenantId: string; userId: string },
   rawToken: string,
-  opts: { requireEventId?: string } = {},
+  opts: { requireEventId?: string; at?: Date } = {},
 ): Promise<CheckInResult> {
   const view = await inspectCheckIn(rawToken);
   if (!view || view.tenantId !== acting.tenantId) return { outcome: "invalid" };
@@ -108,11 +119,20 @@ export async function performCheckIn(
   }
 
   const now = new Date();
+  const checkedInAt = opts.at
+    ? new Date(
+        clampDoorTime(opts.at.getTime(), {
+          createdAtMs: view.createdAt.getTime(),
+          nowMs: now.getTime(),
+        }),
+      )
+    : now;
+
   // Conditional on still being un-checked-in, so two scanners racing the same
   // ticket produce exactly one "checked_in" and one "already".
   const changed = await prisma.registration.updateMany({
     where: { id: view.registrationId, checkedInAt: null },
-    data: { checkedInAt: now },
+    data: { checkedInAt },
   });
   if (changed.count === 0) {
     const fresh = await inspectCheckIn(rawToken);
@@ -127,5 +147,5 @@ export async function performCheckIn(
     targetId: view.registrationId,
   });
 
-  return { outcome: "checked_in", name: view.name, at: now };
+  return { outcome: "checked_in", name: view.name, at: checkedInAt };
 }

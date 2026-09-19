@@ -160,12 +160,14 @@ the Play App Signing key, and the Apple Team ID.
    check-ins from a device two seconds fast and pushes them into the app's
    "needs attention" list. As built, a claim within five minutes ahead is
    clamped to now and only a larger gap is refused. See `lib/checkin-time.ts`.
-6. **#24 gives `at` to E5 but not to E6, which loses most of what it is for.**
-   The app queues *both* kinds of offline check-in, and the scanner is the
-   busier path. `_replayScan` posts to `/mobile/checkin` with no time, so an
-   offline scan replayed an hour later still records the replay time — exactly
-   the problem `at` exists to fix, on the endpoint where it happens most. E6
-   should take the same optional `at`, with the same bounds.
+6. ~~#24 gives `at` to E5 but not to E6.~~ **Amended and built.** E6 now takes
+   the same optional `at`, with the same bounds, because the scanner is the
+   busier of the two offline paths and leaving it out lost most of what `at`
+   is for. The refusal and the clamp are split (`isImpossiblyAhead` and
+   `clampDoorTime`) because the route can reject an impossible clock knowing
+   only the time, while only `performCheckIn` holds the registration the lower
+   bound needs; `resolveDoorTime` composes them and a test pins the three to
+   agreeing.
 
 ## 7. Risks
 
@@ -262,10 +264,10 @@ Built on the server:
    `feature_availability.dart`. One line, in the mobile repository.
 2. **Nothing in the app sends `at` yet.** `CheckinRepository.setCheckedIn` has
    no such parameter, and neither does `scan`; `SyncWorker._replayManual` and
-   `_replayScan` both post without a time. The server accepts and bounds `at`
-   today, but until the Flutter interface carries the queued `clientAt` through,
-   every replayed check-in is still stamped with the replay. Fixing this needs
-   the E6 amendment in §6.6 as well, or scans stay wrong.
+   `_replayScan` both post without a time. Both endpoints accept and bound `at`
+   now (E5 from Phase 2, E6 from the §6.6 amendment), so the server side is
+   complete — but until the Flutter interface carries the queued `clientAt`
+   through, every replayed check-in is still stamped with the replay.
 
 ---
 

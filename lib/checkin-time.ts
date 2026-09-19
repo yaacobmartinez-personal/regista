@@ -26,18 +26,47 @@ export type DoorTime =
   | { ok: false; reason: "future" };
 
 /**
- * Bound a client's claimed check-in time to something that could have happened.
+ * Further ahead than a clock difference explains.
+ *
+ * Separated from the clamp below because the two halves are needed in different
+ * places: a route can refuse an impossible time knowing only the clock, while
+ * pulling a plausible one into range needs the registration it belongs to.
+ */
+export function isImpossiblyAhead(
+  claimedMs: number,
+  nowMs: number,
+  toleranceMs: number = CLOCK_SKEW_TOLERANCE_MS,
+): boolean {
+  return claimedMs > nowMs + toleranceMs;
+}
+
+/**
+ * Pull a claimed time into the window where it could have happened.
  *
  * Nobody arrives before they signed up, and nothing happens later than now, so a
  * value outside those bounds is a wrong clock rather than a fact — it is pulled
  * to the nearest end rather than stored as given.
+ */
+export function clampDoorTime(
+  claimedMs: number,
+  bounds: { createdAtMs: number; nowMs: number },
+): number {
+  return Math.min(Math.max(claimedMs, bounds.createdAtMs), bounds.nowMs);
+}
+
+/**
+ * Both at once: refuse an impossible time, bound a plausible one.
+ *
+ * What the manual check-in does in a single step, since it has the registration
+ * in hand before it has to decide.
  */
 export function resolveDoorTime(
   claimedMs: number,
   bounds: { createdAtMs: number; nowMs: number },
   toleranceMs: number = CLOCK_SKEW_TOLERANCE_MS,
 ): DoorTime {
-  if (claimedMs > bounds.nowMs + toleranceMs) return { ok: false, reason: "future" };
-  const atMs = Math.min(Math.max(claimedMs, bounds.createdAtMs), bounds.nowMs);
-  return { ok: true, atMs };
+  if (isImpossiblyAhead(claimedMs, bounds.nowMs, toleranceMs)) {
+    return { ok: false, reason: "future" };
+  }
+  return { ok: true, atMs: clampDoorTime(claimedMs, bounds) };
 }

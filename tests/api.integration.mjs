@@ -345,6 +345,103 @@ async function run() {
     "invalid",
   );
 
+  console.log("\na scan replayed from offline keeps the door time");
+  // A second ticket, so the door-time checks do not disturb the scan outcomes
+  // asserted above.
+  const doorEvent = await prisma.event.create({
+    data: {
+      tenantId: f.home.id,
+      slug: "door-event",
+      title: "Door Event",
+      startsAt: new Date(Date.now() + 3 * 864e5),
+      timezone: "UTC",
+      status: "PUBLISHED",
+    },
+  });
+  // Signed up two hours ago, as a real attendee would have: the clamp's floor is
+  // the registration's own createdAt, so a fixture created this instant would
+  // make every past door time "before they signed up".
+  const SIGNED_UP = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const ticket = async (suffix) =>
+    (await prisma.registration.create({
+      data: {
+        tenantId: f.home.id,
+        eventId: doorEvent.id,
+        email: `${P}door-${suffix}@example.test`,
+        name: `Door ${suffix}`,
+        status: "CONFIRMED",
+        checkInToken: `${P}door-${suffix}`,
+        createdAt: SIGNED_UP,
+      },
+    })).checkInToken;
+
+  const onTime = await ticket("ontime");
+  const doorTime = new Date(Date.now() - 45 * 60 * 1000); // three quarters of an hour ago
+  const replayed = await req("POST", "/mobile/checkin", {
+    token: adminToken,
+    body: { slug: `${P}home`, code: onTime, at: doorTime.toISOString() },
+  });
+  check("the scan succeeds", replayed.body.outcome, "checked_in");
+  check(
+    "...and records when it actually happened, not when it synced",
+    replayed.body.at,
+    doorTime.toISOString(),
+  );
+  check(
+    "the stored row agrees",
+    (await prisma.registration.findUnique({
+      where: { checkInToken: onTime },
+      select: { checkedInAt: true },
+    })).checkedInAt.toISOString(),
+    doorTime.toISOString(),
+  );
+
+  const skewed = await ticket("skew");
+  const ahead = await req("POST", "/mobile/checkin", {
+    token: adminToken,
+    body: { slug: `${P}home`, code: skewed, at: new Date(Date.now() + 3000).toISOString() },
+  });
+  check("a clock a few seconds fast is accepted, not refused", ahead.body.outcome, "checked_in");
+  check(
+    "...and lands at now rather than in the future",
+    Date.parse(ahead.body.at) <= Date.now() + 1000,
+    true,
+  );
+
+  const early = await ticket("early");
+  const beforeSignup = await req("POST", "/mobile/checkin", {
+    token: adminToken,
+    body: { slug: `${P}home`, code: early, at: "2020-01-01T00:00:00.000Z" },
+  });
+  check(
+    "nobody arrives before they signed up — pulled up to their sign-up time",
+    beforeSignup.body.at,
+    SIGNED_UP.toISOString(),
+  );
+
+  const wild = await ticket("wild");
+  const future = await req("POST", "/mobile/checkin", {
+    token: adminToken,
+    body: { slug: `${P}home`, code: wild, at: new Date(Date.now() + 7 * 864e5).toISOString() },
+  });
+  check("a badly wrong clock is refused", future.status, 400);
+  check(
+    "...and nobody was checked in by it",
+    (await prisma.registration.findUnique({
+      where: { checkInToken: wild },
+      select: { checkedInAt: true },
+    })).checkedInAt,
+    null,
+  );
+  check(
+    "a scan with no time at all still works as before",
+    (await req("POST", "/mobile/checkin", {
+      token: adminToken,
+      body: { slug: `${P}home`, code: await ticket("plain") },
+    })).body.outcome,
+    "checked_in",
+  );
+
   console.log("\nsigning up for an event, as an account");
   const registered = await req("POST", `${eventPath}/register`, {
     token: freshAttendeeToken,
@@ -393,11 +490,11 @@ async function run() {
     (await req("GET", `/public/orgs/${P}pending`)).status,
     404,
   );
-  check(
-    "a draft event is not listed",
-    (await req("GET", `/public/orgs/${P}home/events`)).body.events.map((e) => e.slug),
-    ["open-event"],
-  );
+  const published = (await req("GET", `/public/orgs/${P}home/events`)).body.events.map((e) => e.slug);
+  // Stated as an invariant rather than an exact list, so adding a fixture
+  // elsewhere in this suite cannot make it fail for the wrong reason.
+  check("a draft event is not listed", published.includes("draft-event"), false);
+  check("...while published ones are", published.includes("open-event"), true);
   check(
     "nor reachable by name",
     (await req("GET", `/public/orgs/${P}home/events/draft-event`)).status,
