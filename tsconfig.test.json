@@ -23,6 +23,7 @@
     "lib/slug.ts",
     "lib/urls.ts",
     "lib/mobile-auth.ts",
-    "lib/api-response.ts"
+    "lib/api-response.ts",
+    "lib/checkin-time.ts"
   ]
 }

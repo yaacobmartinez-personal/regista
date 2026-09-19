@@ -28,6 +28,17 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
   scanning twice reports "already" rather than failing. Erased attendees still
   appear with their place intact and nothing identifying, and the placeholder
   address left behind by an erasure cannot be searched for.
+- **Running a door with no signal.** The attendee list the app caches now carries
+  each ticket's check-in code and the event's waitlist count, so a scanner with
+  no connection can recognise a ticket and say who it belongs to — and give the
+  same named answer as online for a waitlisted place, a cancelled one, or a
+  ticket for the wrong event, instead of a shrug. Marking someone present also
+  accepts the time it actually happened, so a queue of check-ins taken offline
+  and sent an hour later records the door rather than the moment the signal came
+  back. A time from a badly wrong clock is refused; a phone a few seconds out is
+  simply treated as now, because a door should not send staff to an error list
+  over a clock.
+
 - **Closing your own account.** The product's first account-removal path, from
   the app. The record is anonymized rather than deleted, the same trade erasing a
   registration makes, so the audit trail keeps its shape; every membership goes,

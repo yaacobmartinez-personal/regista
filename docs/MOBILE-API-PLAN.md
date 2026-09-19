@@ -5,9 +5,9 @@ waiting on this backend. Its `docs/API-CONTRACT.md` is the specification; this
 document is the plan for building it here, plus the corrections and decisions
 that contract needs before work starts.
 
-Status: **Phases 0 and 1 are built** (the foundation and the seven endpoints
-section 1 of the contract wrongly listed as already serving). Phases 2–9 are
-still plan. Decisions taken since the first draft are marked **Decided** below.
+Status: **Phases 0, 1 and 2 are built** (the foundation, the seven endpoints
+section 1 of the contract wrongly listed as already serving, and the fields the
+app needs to run a door offline). Phases 3–9 are still plan. Decisions taken since the first draft are marked **Decided** below.
 
 ---
 
@@ -129,7 +129,7 @@ independently shippable. Phase 1 is mandatory; everything after is a choice.
 |---|---|---|---|---|
 | 0 ✓ | Foundation — token, authz, wire format | — | — | `plan`, `tokenVersion` |
 | 1 ✓ | **The missing seven** — login, orgs, events, attendee list, check-in toggle, scan, close account | E1–E7 | *(ungated)* | none |
-| 2 | Offline scan support — `checkInToken` and `waitlist` on the attendee payload, `at` on check-in | #23, #24 | `offlineTokens` | none |
+| 2 ✓ | Offline scan support — `checkInToken` and `waitlist` on the attendee payload, `at` on check-in | #23, #24 | `offlineTokens` | none |
 | 3 | Event CRUD | #18–#22 | `eventCrud` | none |
 | 4 | Promote / erase / CSV export | #25–#27 | `promoteErase`, `csvExport` | none |
 | 5 | Attendee mode — public reads, register, tickets | #8–#17 | `attendeeMode` | `Registration.userId` |
@@ -154,6 +154,18 @@ the Play App Signing key, and the Apple Team ID.
 4. `501` for unshipped endpoints never happens: the app's `_require()` throws
    client-side before any request, and an unimplemented Next route returns 404.
    Harmless, but the contract should not promise it.
+5. **#24 says "400 if `at` is in the future", which cannot be meant literally.**
+   A phone's clock is the only source for an offline check-in and will not agree
+   with the server's to the second, so a strict reading refuses legitimate door
+   check-ins from a device two seconds fast and pushes them into the app's
+   "needs attention" list. As built, a claim within five minutes ahead is
+   clamped to now and only a larger gap is refused. See `lib/checkin-time.ts`.
+6. **#24 gives `at` to E5 but not to E6, which loses most of what it is for.**
+   The app queues *both* kinds of offline check-in, and the scanner is the
+   busier path. `_replayScan` posts to `/mobile/checkin` with no time, so an
+   offline scan replayed an hour later still records the replay time — exactly
+   the problem `at` exists to fix, on the endpoint where it happens most. E6
+   should take the same optional `at`, with the same bounds.
 
 ## 7. Risks
 
@@ -226,3 +238,31 @@ by hand, which is fine while the operator and the developer are the same person
 and worth a dashboard control before they are not. And revocation is not
 instant-proof: a request already in flight when the number changes completes
 normally. For a check-in API that is the right trade.
+
+---
+
+## 10. Phase 2 — what shipped, and what still blocks the offline door
+
+Built on the server:
+
+- **`checkInToken` on every attendee row** (null when erased, which erasure has
+  already cleared anyway). The app caches the list and resolves a scanned ticket
+  against it with no signal, giving the same named feedback offline as online.
+  Sending it grants nothing new: the token is not a credential, and a member who
+  can read this list can already check in anyone on it.
+- **`waitlist` on the event header**, counted rather than derived from the
+  returned array — which is capped at 500 and narrowed by `q`, so counting it
+  would mislead on exactly the large events where the number matters.
+- **`at` on E5**, bounded by `lib/checkin-time.ts`: refused when more than five
+  minutes ahead, otherwise pulled into `[createdAt, now]`.
+
+**Two client-side gaps remain before any of this reaches a door.**
+
+1. `Feature.offlineTokens` is still `false` in the app's
+   `feature_availability.dart`. One line, in the mobile repository.
+2. **Nothing in the app sends `at` yet.** `CheckinRepository.setCheckedIn` has
+   no such parameter, and neither does `scan`; `SyncWorker._replayManual` and
+   `_replayScan` both post without a time. The server accepts and bounds `at`
+   today, but until the Flutter interface carries the queued `clientAt` through,
+   every replayed check-in is still stamped with the replay. Fixing this needs
+   the E6 amendment in §6.6 as well, or scans stay wrong.
