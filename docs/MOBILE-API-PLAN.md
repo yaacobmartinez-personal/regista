@@ -5,9 +5,9 @@ waiting on this backend. Its `docs/API-CONTRACT.md` is the specification; this
 document is the plan for building it here, plus the corrections and decisions
 that contract needs before work starts.
 
-Status: **Phases 0, 1 and 2 are built** (the foundation, the seven endpoints
-section 1 of the contract wrongly listed as already serving, and the fields the
-app needs to run a door offline). Phases 3–9 are still plan. Decisions taken since the first draft are marked **Decided** below.
+Status: **Phases 0–3 are built** (the foundation, the seven endpoints section 1
+of the contract wrongly listed as already serving, the fields the app needs to
+run a door offline, and event CRUD). Phases 4–9 are still plan. Decisions taken since the first draft are marked **Decided** below.
 
 ---
 
@@ -130,7 +130,7 @@ independently shippable. Phase 1 is mandatory; everything after is a choice.
 | 0 ✓ | Foundation — token, authz, wire format | — | — | `plan`, `tokenVersion` |
 | 1 ✓ | **The missing seven** — login, orgs, events, attendee list, check-in toggle, scan, close account | E1–E7 | *(ungated)* | none |
 | 2 ✓ | Offline scan support — `checkInToken` and `waitlist` on the attendee payload, `at` on check-in | #23, #24 | `offlineTokens` | none |
-| 3 | Event CRUD | #18–#22 | `eventCrud` | none |
+| 3 ✓ | Event CRUD | #18–#22 | `eventCrud` | none |
 | 4 | Promote / erase / CSV export | #25–#27 | `promoteErase`, `csvExport` | none |
 | 5 | Attendee mode — public reads, register, tickets | #8–#17 | `attendeeMode` | `Registration.userId` |
 | 6 | Signup, email verification, password reset | #1–#5 | `signup`, `passwordReset` | `PasswordResetToken` |
@@ -266,3 +266,46 @@ Built on the server:
    today, but until the Flutter interface carries the queued `clientAt` through,
    every replayed check-in is still stamped with the replay. Fixing this needs
    the E6 amendment in §6.6 as well, or scans stay wrong.
+
+---
+
+## 11. Phase 3 — event CRUD
+
+Built: read one event (#18), create (#19), edit (#20), publish/close (#21) and
+delete (#22). No migration. The rules the web already enforces are reused rather
+than restated, including the two that are easy to miss — capacity cannot fall
+below the number of people already holding a place, and raising it promotes the
+longest-waiting in the same transaction.
+
+Three things worth knowing about how it is put together:
+
+- **One schema, two front ends.** `eventInputSchema` was written for a form,
+  where everything arrives as a string. `lib/event-input.ts` converts a JSON
+  body into that shape rather than adding a second schema, because the contract
+  requires identical validation messages and two copies would drift. It is a
+  pure module so the conversions are tested directly; a mistake there surfaces
+  as the wrong message, or as a field silently cleared.
+- **The response is re-read, not echoed.** After a create or an edit the event
+  is loaded back from the database, so the counts reflect anyone promoted off
+  the waitlist by the same request instead of what the request asked for.
+- **`revalidateEventSurfaces` moved to `lib/event-surfaces.ts`** and is now
+  shared with the web actions it came from. An event published from the app has
+  to reach the public site for the same reason one published from the dashboard
+  does; closing registrations while a cached page still offers a working sign-up
+  form is the failure this prevents.
+
+### Two gotchas recorded
+
+- **`PATCH` (#20) is a full replace, not a partial update.** The contract says
+  "same body" as #19, and the web form posts every field, so an omitted
+  `description` or `endsAt` is stored as null rather than left alone. The app
+  always sends the complete form, so this is safe today — but the verb invites
+  a partial body from anyone hand-rolling a call, and that would quietly clear
+  fields. Worth renaming to `PUT` in the contract, or documenting loudly.
+- **The server does not validate slug *shape*.** `eventInputSchema` only caps it
+  at 63 characters; `uniqueEventSlug` then slugifies whatever arrives. The app
+  checks the shape itself and reports "Use 3–63 lowercase letters, numbers, or
+  hyphens.", so a malformed slug never reaches the server from it — but a
+  different client would get a silently cleaned address instead of that error.
+  Pre-existing web behaviour, and it fails safe; flagged because the contract
+  implies the messages match on every field, and here they do not.

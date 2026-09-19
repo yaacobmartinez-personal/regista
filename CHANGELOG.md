@@ -28,6 +28,17 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
   scanning twice reports "already" rather than failing. Erased attendees still
   appear with their place intact and nothing identifying, and the placeholder
   address left behind by an erasure cannot be searched for.
+- **Organizers can run their events from the app.** Creating, editing,
+  publishing, closing and deleting an event all work from the phone now, under
+  the same rules as the dashboard and with the same wording when something is
+  wrong — down to the warning that a time does not exist on a night the clocks
+  go forward. Capacity still cannot be set below the number of people already
+  holding a place, and raising it still moves the longest-waiting people up at
+  once. Publishing stays its own deliberate step rather than something an edit
+  can do by accident, and only an admin can delete an event, since that takes
+  every registration under it. An event published from the app appears on the
+  public site immediately, as one published from the dashboard does.
+
 - **Running a door with no signal.** The attendee list the app caches now carries
   each ticket's check-in code and the event's waitlist count, so a scanner with
   no connection can recognise a ticket and say who it belongs to — and give the

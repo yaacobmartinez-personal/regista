@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/db";
 import { requireApiMembership } from "@/lib/api-auth";
-import { route } from "@/lib/api-response";
+import { eventInputSchema, loadEventDetail, uniqueEventSlug } from "@/lib/events";
+import { eventInputFromJson } from "@/lib/event-input";
+import { revalidateEventSurfaces } from "@/lib/event-surfaces";
+import { readJson, route, validationFailed } from "@/lib/api-response";
 
 /**
  * E3 — an organization's events, with the two headline numbers the app shows on
@@ -66,4 +69,45 @@ export const GET = route(async (
       checkedIn: checkedIn.get(event.id) ?? 0,
     })),
   });
+});
+
+/**
+ * #19 — create an event.
+ *
+ * Always DRAFT: publishing is a separate, deliberate step (#21), as it is on the
+ * web. The slug is derived and de-duplicated server-side, so two people naming
+ * an event the same thing get `-2` rather than an error — the mobile client
+ * never has to guess what address it will get, it reads the one that comes back.
+ */
+export const POST = route(async (
+  request: Request,
+  ctx: { params: Promise<{ slug: string }> },
+) => {
+  const { slug } = await ctx.params;
+  const { tenant } = await requireApiMembership(request, slug);
+
+  const parsed = eventInputSchema.safeParse(eventInputFromJson(await readJson(request)));
+  if (!parsed.success) throw validationFailed(parsed.error);
+  const data = parsed.data;
+
+  const eventSlug = await uniqueEventSlug(tenant.id, data.slug || data.title);
+
+  await prisma.event.create({
+    data: {
+      tenantId: tenant.id,
+      slug: eventSlug,
+      title: data.title,
+      description: data.description,
+      startsAt: data.startsAt,
+      endsAt: data.endsAt,
+      timezone: data.timezone,
+      capacity: data.capacity,
+      waitlistEnabled: data.waitlistEnabled,
+      status: "DRAFT",
+    },
+  });
+
+  const event = await loadEventDetail(tenant.id, eventSlug);
+  revalidateEventSurfaces(tenant.slug, eventSlug);
+  return Response.json({ event }, { status: 201 });
 });

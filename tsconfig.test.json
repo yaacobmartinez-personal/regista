@@ -24,6 +24,7 @@
     "lib/urls.ts",
     "lib/mobile-auth.ts",
     "lib/api-response.ts",
-    "lib/checkin-time.ts"
+    "lib/checkin-time.ts",
+    "lib/event-input.ts"
   ]
 }
