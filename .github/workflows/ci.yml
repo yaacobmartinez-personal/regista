@@ -56,6 +56,12 @@ jobs:
       # cannot be applied fails here rather than on a deploy.
       - run: pnpm prisma migrate deploy
 
+      # The domain suites assert against the demo organizations rather than
+      # creating their own, and say so when they are missing. Seeding is
+      # idempotent, so this is safe to run on every job.
+      - name: Seed
+        run: pnpm prisma db seed
+
       - name: Lint
         run: pnpm lint
 

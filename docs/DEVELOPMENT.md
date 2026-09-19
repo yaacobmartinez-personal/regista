@@ -437,10 +437,16 @@ The palette lives in `app/globals.css`: values in `@theme` for light, overridden
 
 ```bash
 pnpm test       # unit tests — no database needed
+pnpm db:seed    # test:db asserts against the demo organizations
 pnpm test:db    # domain invariants against a real database — needs pnpm db:up
 pnpm build      # the API suite runs against a production build
 pnpm test:api   # the mobile API over HTTP — needs the build and the database
 ```
+
+`test:db` reads the seeded `acme` and `beta` organizations rather than creating
+its own, so a database that has been migrated but not seeded fails it with a
+message saying exactly that. `test:api` seeds its own fixtures under an
+`apitest-` prefix and needs no help.
 
 All four run on every push and pull request
 ([.github/workflows/ci.yml](../.github/workflows/ci.yml)), against a throwaway Postgres on
