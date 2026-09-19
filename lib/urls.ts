@@ -76,3 +76,24 @@ export function manageRegistrationUrl(
 export function checkInUrl(rawToken: string): string {
   return `${appOrigin()}/checkin?c=${encodeURIComponent(rawToken)}`;
 }
+
+/**
+ * The inverse of `checkInUrl`: recover the ticket token from whatever a scanner
+ * produced.
+ *
+ * Decoding the QR yields the whole check-in URL, while someone typing a code
+ * from a printed ticket yields the token on its own — both reach the door, so
+ * both have to work. Anything else yields "", which resolves as an unknown
+ * ticket rather than an error.
+ */
+export function extractCheckInCode(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  if (!/^https?:\/\//i.test(trimmed)) return trimmed;
+  try {
+    return new URL(trimmed).searchParams.get("c")?.trim() ?? "";
+  } catch {
+    return "";
+  }
+}
+

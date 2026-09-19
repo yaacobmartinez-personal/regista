@@ -5,7 +5,9 @@ waiting on this backend. Its `docs/API-CONTRACT.md` is the specification; this
 document is the plan for building it here, plus the corrections and decisions
 that contract needs before work starts.
 
-Status: **plan, not yet implemented.** Nothing below is built.
+Status: **Phases 0 and 1 are built** (the foundation and the seven endpoints
+section 1 of the contract wrongly listed as already serving). Phases 2–9 are
+still plan. Decisions taken since the first draft are marked **Decided** below.
 
 ---
 
@@ -74,13 +76,13 @@ noted under "Contract corrections" below.
 | 6 | `PasswordResetToken` model (hashed token, 1 h TTL, single-use) | Password reset (#4, #5) — **the web has no reset flow at all today** |
 | 8 | `User.googleSub String? @unique`, `User.appleSub String? @unique` | Social sign-in (#6, #7) |
 | 7 | New `AuditAction` value `CREATE_TENANT` | Org creation (#35) |
-| — | `Tenant.plan` — **see below** | `Org.plan` in the contract |
+| **0 ✓** | `Tenant.plan` (`PlanTier` = FREE/PREMIUM/CUSTOM, default FREE) | `Org.plan` in the contract |
+| **0 ✓** | `User.tokenVersion Int @default(0)` | Token revocation (§9) |
 
-`Tenant.plan` does not exist and there is no plan/billing concept anywhere in
-the product. The Dart `Org` model defaults it (`@Default(PlanTier.free)`), so
-**the server can omit the field entirely** and the app reads `FREE`.
-Recommendation: omit it, and do not add a billing column until there is a
-billing feature. The contract should drop `plan` from the `Org` shape.
+**Decided:** `Tenant.plan` is built, not omitted. Paid tiers are coming in the
+next version, and the column is cheap now — adding it later would mean changing a
+shape the app has already shipped against. `GET /mobile/orgs` reports it from the
+first release. Only `FREE` is ever set today; nothing reads the value yet.
 
 ## 4. Foundation to build first (Phase 0)
 
@@ -89,11 +91,15 @@ Three new modules, all under `lib/`:
 **`lib/mobile-auth.ts`**
 - `mintToken(userId)` → `base64url(JSON{sub, exp}) + "." + base64url(HMAC-SHA256(body, AUTH_SECRET))`, 30-day TTL.
 - `verifyToken(raw)` → `{ sub }` or null. Constant-time signature compare.
-- **`exp` is milliseconds since the epoch, not seconds.** `token_codec.dart`
-  does `DateTime.fromMillisecondsSinceEpoch(exp)`; seconds would read as 1970 and
-  the app would treat every token as expired and never send it.
-- Identity only. Membership and role are resolved from the database per request,
-  exactly as `lib/authz.ts` already does for the web.
+- **`exp` is milliseconds since the epoch, not seconds** (**Decided**, and
+  covered by `tests/mobile-auth.test.mjs`). `token_codec.dart` does
+  `DateTime.fromMillisecondsSinceEpoch(exp)`; the JWT-conventional seconds would
+  read as 1970, and the app would treat every token as already expired and never
+  send the one it had just been given. This is the one detail that cannot be
+  inferred from the format, so it is asserted rather than commented.
+- Identity only, plus `ver` for revocation (§9). Membership and role are
+  resolved from the database per request, exactly as `lib/authz.ts` does for the
+  web.
 
 **`lib/api-auth.ts`** — the non-throwing authz layer.
 - `requireApiUser(req)` → `{ userId }` or a 401 response.
@@ -121,8 +127,8 @@ independently shippable. Phase 1 is mandatory; everything after is a choice.
 
 | # | Phase | Contract items | Flag | Schema |
 |---|---|---|---|---|
-| 0 | Foundation | — | — | none |
-| 1 | **The missing seven** — login, orgs, events, attendee list, check-in toggle, scan, delete account | E1–E7 | *(ungated)* | none |
+| 0 ✓ | Foundation — token, authz, wire format | — | — | `plan`, `tokenVersion` |
+| 1 ✓ | **The missing seven** — login, orgs, events, attendee list, check-in toggle, scan, close account | E1–E7 | *(ungated)* | none |
 | 2 | Offline scan support — `checkInToken` and `waitlist` on the attendee payload, `at` on check-in | #23, #24 | `offlineTokens` | none |
 | 3 | Event CRUD | #18–#22 | `eventCrud` | none |
 | 4 | Promote / erase / CSV export | #25–#27 | `promoteErase`, `csvExport` | none |
@@ -151,10 +157,7 @@ the Play App Signing key, and the Apple Team ID.
 
 ## 7. Risks
 
-- **No token revocation.** A 30-day token cannot be invalidated — not by signing
-  out, and not by `DELETE /mobile/account`. A leaked token stays valid for its
-  full life. Mitigation if wanted: a `User.tokenVersion` integer included in the
-  payload and compared per request; bumping it invalidates every token.
+- ~~No token revocation.~~ **Built in Phase 0** — see §9.
 - **Rate limits are weaker than they look.** `lib/rate-limit.ts` is in-process
   memory, and the Render free plan sleeps after ~15 minutes idle, so counters
   reset on every cold start. The login limit (10/15 min) is the one that matters;
@@ -177,3 +180,49 @@ codec and the zod→`fieldErrors` mapper, and `*.integration.mjs` against a real
 database for the authz matrix (non-member, wrong role, inactive tenant) and the
 check-in and registration races, which already have integration coverage to
 extend.
+
+---
+
+## 9. Token revocation
+
+A 30-day bearer token with no refresh endpoint is a long time to be unable to
+take something back. `User.tokenVersion` is the answer, and it is built.
+
+**How it works.** Every token carries the `ver` it was minted with. On each
+request `requireApiUser` reads the user row — which it has to do anyway, to
+confirm the account still exists — and rejects the token when `ver` no longer
+matches the column. Revocation therefore costs no extra query. Raising the
+number by one invalidates **every token ever issued to that account**, on every
+device, at once.
+
+```sql
+UPDATE "User" SET "tokenVersion" = "tokenVersion" + 1 WHERE email = $1;
+```
+
+The next request from any of that person's devices gets a 401, and the app signs
+out on a 401 by contract. They sign in again and get a token carrying the new
+number. Nothing else is disturbed: the password still works, and their **web
+session is untouched**, because that is a NextAuth cookie and knows nothing
+about this column.
+
+**What already uses it.** Closing an account (E7) increments it. That is what
+actually ends the sessions — the row survives anonymization, so without the
+bump every token minted for it would keep resolving for up to thirty days.
+
+**When to reach for it.** A lost or stolen phone; a token pasted somewhere it
+should not be; a password reset (once #5 ships, it should increment as a matter
+of course — changing a password that leaves old sessions alive is a surprise);
+and any suspicion about an account, where it is the cheapest safe action.
+
+**What it deliberately is not.** It is per **account**, not per device: there is
+no way to sign out one phone and leave another signed in, because nothing
+identifies a device. Per-device revocation needs a token id in the payload and a
+table of live tokens — real infrastructure, worth it only if the product grows a
+"your devices" screen. The all-or-nothing version covers every case above and
+costs one integer.
+
+**Gaps worth knowing.** There is no UI for it — today it is a SQL statement run
+by hand, which is fine while the operator and the developer are the same person
+and worth a dashboard control before they are not. And revocation is not
+instant-proof: a request already in flight when the number changes completes
+normally. For a check-in API that is the right trade.

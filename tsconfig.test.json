@@ -17,5 +17,12 @@
     "noEmit": false,
     "declaration": false
   },
-  "include": ["lib/time.ts", "lib/csv.ts", "lib/slug.ts"]
+  "include": [
+    "lib/time.ts",
+    "lib/csv.ts",
+    "lib/slug.ts",
+    "lib/urls.ts",
+    "lib/mobile-auth.ts",
+    "lib/api-response.ts"
+  ]
 }

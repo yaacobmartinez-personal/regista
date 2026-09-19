@@ -21,6 +21,14 @@ enum TenantStatus {
   ACTIVE
 }
 
+/// Billing tier. Only FREE is sold today; the others exist so the mobile API
+/// can report a tier from the first release rather than changing shape later.
+enum PlanTier {
+  FREE
+  PREMIUM
+  CUSTOM
+}
+
 enum EventStatus {
   DRAFT
   PUBLISHED
@@ -38,6 +46,7 @@ model Tenant {
   slug      String       @unique // the subdomain
   name      String
   status    TenantStatus @default(PENDING)
+  plan      PlanTier     @default(FREE)
   createdAt DateTime     @default(now())
 
   memberships   Membership[]
@@ -53,6 +62,11 @@ model User {
   name          String?
   passwordHash  String?
   emailVerified DateTime?
+  /// Bumped to revoke every mobile bearer token issued to this user. The value
+  /// is carried in the token and compared on each request, so raising it logs
+  /// the account out of every device at once (see lib/mobile-auth.ts). Web
+  /// sessions are unaffected — those are NextAuth cookies.
+  tokenVersion  Int       @default(0)
   createdAt     DateTime  @default(now())
 
   memberships Membership[]

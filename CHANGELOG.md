@@ -16,6 +16,33 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
 
 ### Added
 
+- **A JSON API for the mobile app.** The Flutter client in the `thingstead-mobile`
+  repository can now sign in and run a door: the first seven endpoints of
+  `docs/API-CONTRACT.md` are live under `/api/mobile/*`. An organizer signs in
+  with the same credentials they use on the web and gets a bearer token (the
+  web's session cookie is host-only for the dashboard subdomain and can never
+  reach a native client), then lists their organizations, an organization's
+  events with live headcounts, and one event's attendee list with search. Staff
+  can mark someone present by hand or by scanning their ticket — the scanner
+  accepts both the QR's full URL and a code typed off a printed ticket, and
+  scanning twice reports "already" rather than failing. Erased attendees still
+  appear with their place intact and nothing identifying, and the placeholder
+  address left behind by an erasure cannot be searched for.
+- **Closing your own account.** The product's first account-removal path, from
+  the app. The record is anonymized rather than deleted, the same trade erasing a
+  registration makes, so the audit trail keeps its shape; every membership goes,
+  and the account can no longer sign in or be invited back by address. Refused
+  while you are the only admin of an organization other people or real events
+  depend on — handing it over first is better than stranding it.
+- **Revocable mobile sessions.** Every bearer token carries the account's
+  `tokenVersion`, checked on each request, so raising that one number signs an
+  account out of every device at once without touching its password or its web
+  session. Closing an account does exactly that, which is what ends its sessions
+  — the record survives anonymization, so nothing else would.
+- **A billing tier on organizations.** `Tenant.plan` (`FREE`, `PREMIUM`,
+  `CUSTOM`, defaulting to `FREE`) is reported by the API from the first release,
+  so adding paid tiers later does not change a shape the app already reads.
+
 - **QR check-in.** Every registration now carries a check-in code. Attendees find
   a QR on their registration page (the one their confirmation email links to);
   staff open **Scan check-in** from an event to turn a phone into a scanner —
