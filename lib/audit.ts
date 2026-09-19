@@ -20,6 +20,9 @@ export type AuditAction =
   | "REVOKE_INVITATION"
   | "REMOVE_MEMBER"
   | "CHANGE_ROLE"
+  // An organization coming into existence from the app, where it is created
+  // outright rather than waiting on a verification link as web signup does.
+  | "CREATE_TENANT"
   // Deleting an event cascades to every registration under it, so it destroys
   // more personal data than any other action in the product.
   | "DELETE_EVENT";

@@ -5,8 +5,9 @@ waiting on this backend. Its `docs/API-CONTRACT.md` is the specification; this
 document is the plan for building it here, plus the corrections and decisions
 that contract needs before work starts.
 
-Status: **Phases 0–6 are built**, and every suite runs in CI. Phases 7–9 are
-still plan; 8 and 9 are blocked on values and consoles outside this repository. Decisions taken since the first draft are marked **Decided** below.
+Status: **Phases 0–7 are built** — every contract item except social sign-in
+(#6, #7) and the deep-link files (§3), both of which are blocked on values and
+consoles outside this repository. Every suite runs in CI. Decisions taken since the first draft are marked **Decided** below.
 
 ---
 
@@ -74,7 +75,7 @@ noted under "Contract corrections" below.
 | **5 ✓** | `Registration.userId String?` + `@@index([userId])`, `onDelete: SetNull` | Tickets belong to an account (#13–#17) |
 | **6 ✓** | `PasswordResetToken` model (hashed token, 1 h TTL, single-use) | Password reset (#4, #5) — the web had no reset flow at all; it does now |
 | 8 | `User.googleSub String? @unique`, `User.appleSub String? @unique` | Social sign-in (#6, #7) |
-| 7 | New `AuditAction` value `CREATE_TENANT` | Org creation (#35) |
+| **7 ✓** | New `AuditAction` value `CREATE_TENANT` | Org creation (#35) |
 | **0 ✓** | `Tenant.plan` (`PlanTier` = FREE/PREMIUM/CUSTOM, default FREE) | `Org.plan` in the contract |
 | **0 ✓** | `User.tokenVersion Int @default(0)` | Token revocation (§9) |
 
@@ -133,7 +134,7 @@ independently shippable. Phase 1 is mandatory; everything after is a choice.
 | 4 ✓ | Promote / erase / CSV export | #25–#27 | `promoteErase`, `csvExport` | none |
 | 5 ✓ | Attendee mode — public reads, register, tickets | #8–#17 | `attendeeMode` | `Registration.userId` |
 | 6 ✓ | Signup, email verification, password reset | #1–#5 | `signup`, `passwordReset` | `PasswordResetToken` |
-| 7 | Org creation and team management | #28–#35 | `createOrg`, `team` | `CREATE_TENANT` audit |
+| 7 ✓ | Org creation and team management | #28–#35 | `createOrg`, `team` | `CREATE_TENANT` audit |
 | 8 | Google and Apple sign-in | #6, #7 | `socialSignIn` | `googleSub`, `appleSub` |
 | 9 | Deep-link hosting — `assetlinks.json`, `apple-app-site-association` | §3 | — | none |
 
@@ -455,3 +456,46 @@ contract specifies and the reason is in the contract's own sentence.
 - **Reset tokens are pruned.** They hold an email address, so they join
   `pruneExpiredRecords` and `pnpm db:prune` alongside verification tokens and
   invitations, and the retention table records them.
+
+---
+
+## 15. Phase 7 — team and organizations
+
+Built: the team and its outstanding invitations (#28), inviting (#29), revoking
+(#30), changing a role (#31), removing a member or leaving (#32), accepting an
+invitation in the app (#33), checking an address (#34) and creating an
+organization (#35).
+
+`withLastAdminGuard` was the last thing living only inside a server action. It
+is in `lib/team.tsx` now with the rest, and it gained one thing the dashboard
+never needed: it says *why* it refused. The web treated "no such membership" and
+"that would leave no admin" alike, because both mean "nothing changed" to a page
+that re-renders either way. The app has to tell someone what to do about it, so
+the guard returns `applied`, `last_admin` or `gone`, and the API answers 409
+with `reason: "last_admin"` or 404.
+
+### Decisions worth knowing
+
+- **An organization can never be left without an admin.** Not by demotion, not
+  by removal, not by leaving. The count happens inside the same transaction as
+  the write, behind a row lock, so two admins leaving at the same moment cannot
+  both pass it. Worth the care: every route that could appoint a new admin
+  requires an admin, so an organization that loses its last one has no way back
+  in.
+- **Accepting an invitation checks the address.** Same reasoning as importing a
+  ticket: an invitation is emailed to one person, forwarding it is easy, and
+  without the check anyone passed the link could put themselves inside an
+  organization. `redeemInvitation` also refuses to change an existing
+  membership, so an old STAFF link cannot quietly demote a sitting admin.
+- **A failed invitation email is a 502, not a silent success.** The row exists
+  and is listed as pending, but nobody was told — the admin needs to know that,
+  so they can revoke and try again. The body carries the invitation so the app
+  can show what was made.
+- **An organization created from the app is ACTIVE immediately.** Web signup
+  leaves one PENDING until its owner proves they own the address; this caller
+  proved it already, because being signed in is what that means. Asking again
+  would be asking twice.
+- **`/mobile/orgs/availability` requires a session.** The contract does not say
+  so either way. It reads the tenant table by name, and there is no reason to
+  let the world enumerate addresses — the app has a token by the time it shows
+  that form.

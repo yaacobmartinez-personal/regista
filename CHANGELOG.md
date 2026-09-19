@@ -28,6 +28,16 @@ the deployment decisions listed in `docs/DATA-RETENTION.md`.
   scanning twice reports "already" rather than failing. Erased attendees still
   appear with their place intact and nothing identifying, and the placeholder
   address left behind by an erasure cannot be searched for.
+- **Teams and organizations, from the app.** Admins can see who is on the team
+  and who has been invited, send and withdraw invitations, promote and demote
+  people, remove them, or leave themselves — and they can start a new
+  organization from the phone, which is usable the moment it is made rather than
+  waiting on another confirmation email. An invitation can only be accepted by
+  the address it was sent to, so a forwarded one puts nobody anywhere. And an
+  organization can never be left with no admin: the last one cannot step down,
+  be removed, or leave until somebody else is promoted, because an organization
+  with no admin has no way back in.
+
 - **Anyone can make an account, and forgotten passwords are recoverable.**
   Signing up in the app creates a personal account with no organization attached
   — until now an account only ever existed alongside one — and the confirmation

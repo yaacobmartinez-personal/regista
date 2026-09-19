@@ -72,11 +72,13 @@ const EMAIL = {
   unconfirmed: `${P}unconfirmed@example.test`,
   fresh: `${P}fresh@example.test`,
   resettable: `${P}resettable@example.test`,
+  founder: `${P}founder@example.test`,
 };
 const RAW_STRANGER_TOKEN = randomBytes(16).toString("base64url");
 const RAW_VERIFY_TOKEN = randomBytes(16).toString("base64url");
 const RAW_RESET_TOKEN = randomBytes(16).toString("base64url");
 const RAW_SECOND_RESET_TOKEN = randomBytes(16).toString("base64url");
+const RAW_INVITE_TOKEN = randomBytes(16).toString("base64url");
 const sha256 = (v) => createHash("sha256").update(v).digest("hex");
 
 async function seed() {
@@ -90,6 +92,7 @@ async function seed() {
   await prisma.registration.deleteMany({ where: { tenantId: { in: tenantIds } } });
   await prisma.event.deleteMany({ where: { tenantId: { in: tenantIds } } });
   await prisma.membership.deleteMany({ where: { tenantId: { in: tenantIds } } });
+  await prisma.invitation.deleteMany({ where: { tenantId: { in: tenantIds } } });
   await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
   await prisma.verificationToken.deleteMany({ where: { identifier: { startsWith: P } } });
   await prisma.passwordResetToken.deleteMany({ where: { identifier: { startsWith: P } } });
@@ -126,6 +129,7 @@ async function seed() {
     user(EMAIL.attendee, "Api Attendee"),
     user(EMAIL.stranger, "Api Stranger"),
     user(EMAIL.resettable, "Api Resettable"),
+    user(EMAIL.founder, "Api Founder"),
   ]);
 
   const home = await prisma.tenant.create({
@@ -234,6 +238,7 @@ async function run() {
   const staffToken = await login(EMAIL.staff);
   const rivalToken = await login(EMAIL.rival);
   const attendeeToken = await login(EMAIL.attendee);
+  const attendeeToken2 = await login(EMAIL.founder);
 
   const orgPath = `/mobile/orgs/${P}home`;
   const eventPath = `${orgPath}/events/open-event`;
@@ -514,6 +519,171 @@ async function run() {
     "and the other link outstanding for that account is dead too",
     (await req("POST", "/mobile/auth/reset-password", { body: { token: RAW_SECOND_RESET_TOKEN, password: "another-one-entirely" } })).status,
     400,
+  );
+
+  console.log("\nthe team is admins-only, and cannot be left without one");
+  const team = await req("GET", `${orgPath}/team`, { token: adminToken });
+  check("an admin sees the team", team.status, 200);
+  check("staff do not", (await req("GET", `${orgPath}/team`, { token: staffToken })).status, 403);
+  check(
+    "the member list names everyone, and marks the viewer",
+    team.body.members.map((m) => [m.email, m.role, m.isSelf]),
+    [[EMAIL.admin, "ADMIN", true], [EMAIL.staff, "STAFF", false]],
+  );
+  check("there is one admin", team.body.adminCount, 1);
+
+  const adminMembership = team.body.members.find((m) => m.email === EMAIL.admin).id;
+  const staffMembership = team.body.members.find((m) => m.email === EMAIL.staff).id;
+
+  // The guard that matters: an organization with no admin has no way back in,
+  // because every route that could appoint one requires an admin.
+  const soleDemotion = await req("PATCH", `${orgPath}/team/members/${adminMembership}`, {
+    token: adminToken,
+    body: { role: "STAFF" },
+  });
+  check("the only admin cannot demote themselves", soleDemotion.status, 409);
+  check("...and is told why, so the app can say what to do", soleDemotion.body.reason, "last_admin");
+  const soleRemoval = await req("DELETE", `${orgPath}/team/members/${adminMembership}`, { token: adminToken });
+  check("nor leave", soleRemoval.status, 409);
+  check("...for the same reason", soleRemoval.body.reason, "last_admin");
+  check(
+    "they are still an admin afterwards",
+    (await prisma.membership.count({ where: { tenantId: f.home.id, role: "ADMIN" } })),
+    1,
+  );
+
+  check(
+    "promoting someone else works",
+    (await req("PATCH", `${orgPath}/team/members/${staffMembership}`, {
+      token: adminToken,
+      body: { role: "ADMIN" },
+    })).body.member.role,
+    "ADMIN",
+  );
+  check(
+    "...and now the first admin may step down",
+    (await req("PATCH", `${orgPath}/team/members/${adminMembership}`, {
+      token: adminToken,
+      body: { role: "STAFF" },
+    })).status,
+    200,
+  );
+  // Put it back: later checks in this suite act as an admin.
+  await prisma.membership.update({ where: { id: adminMembership }, data: { role: "ADMIN" } });
+  await prisma.membership.update({ where: { id: staffMembership }, data: { role: "STAFF" } });
+  check(
+    "a membership from another organization does not resolve",
+    (await req("DELETE", `/mobile/orgs/${P}rival/team/members/${staffMembership}`, { token: rivalToken })).status,
+    404,
+  );
+
+  console.log("\ninvitations go to the address on them, and nowhere else");
+  const invited = await req("POST", `${orgPath}/team/invitations`, {
+    token: adminToken,
+    body: { email: `${P}invitee@example.test`, role: "STAFF" },
+  });
+  // No mail provider here, so the row exists but nobody was told — which is a
+  // 502 precisely so the admin knows to revoke and try again.
+  check("a failed send is reported, not swallowed", invited.status, 502);
+  check("...and the invitation it made is named", invited.body.invitation.email, `${P}invitee@example.test`);
+  check(
+    "inviting somebody already on the team says so instead",
+    (await req("POST", `${orgPath}/team/invitations`, {
+      token: adminToken,
+      body: { email: EMAIL.staff, role: "STAFF" },
+    })).body.alreadyMember,
+    true,
+  );
+
+  const liveInvite = await prisma.invitation.findFirst({
+    where: { tenantId: f.home.id, email: `${P}invitee@example.test` },
+    select: { id: true },
+  });
+  // A known token for an invitation nobody can read the raw value of otherwise.
+  await prisma.invitation.update({
+    where: { id: liveInvite.id },
+    data: { token: sha256(RAW_INVITE_TOKEN) },
+  });
+  const wrongPerson = await req("POST", "/mobile/invitations/accept", {
+    token: adminToken,
+    body: { token: RAW_INVITE_TOKEN },
+  });
+  check("a forwarded invitation cannot be accepted by somebody else", wrongPerson.status, 403);
+  check("...and says why", wrongPerson.body.reason, "email_mismatch");
+  check(
+    "nobody was added by the attempt",
+    (await prisma.membership.count({ where: { tenantId: f.home.id } })),
+    2,
+  );
+  check(
+    "staff cannot invite at all",
+    (await req("POST", `${orgPath}/team/invitations`, {
+      token: staffToken,
+      body: { email: `${P}nope@example.test`, role: "STAFF" },
+    })).status,
+    403,
+  );
+  check(
+    "revoking an invitation from another organization does not resolve",
+    (await req("DELETE", `/mobile/orgs/${P}rival/team/invitations/${liveInvite.id}`, { token: rivalToken })).status,
+    404,
+  );
+  check(
+    "revoking it as its own admin works",
+    (await req("DELETE", `${orgPath}/team/invitations/${liveInvite.id}`, { token: adminToken })).status,
+    200,
+  );
+
+  console.log("\nmaking an organization from the app");
+  check(
+    "a free address reads as available",
+    (await req("GET", `/mobile/orgs/availability?slug=${P}brand-new`, { token: attendeeToken2 })).body,
+    { slug: `${P}brand-new`, available: true },
+  );
+  check(
+    "a taken one does not",
+    (await req("GET", `/mobile/orgs/availability?slug=${P}home`, { token: attendeeToken2 })).body.reason,
+    "taken",
+  );
+  check(
+    "a reserved name does not",
+    (await req("GET", "/mobile/orgs/availability?slug=app", { token: attendeeToken2 })).body.reason,
+    "reserved",
+  );
+  check(
+    "nor a malformed one",
+    (await req("GET", "/mobile/orgs/availability?slug=No_Good", { token: attendeeToken2 })).body.reason,
+    "invalid",
+  );
+
+  const created = await req("POST", "/mobile/orgs", {
+    token: attendeeToken2,
+    body: { name: "Brand New Org", slug: `${P}brand-new` },
+  });
+  check("creating it succeeds", created.status, 201);
+  check("...as its admin", created.body.org.role, "ADMIN");
+  check(
+    "it is usable immediately, with no confirmation email to wait for",
+    (await prisma.tenant.findUnique({ where: { slug: `${P}brand-new` }, select: { status: true } })).status,
+    "ACTIVE",
+  );
+  check(
+    "it shows up as theirs",
+    (await req("GET", "/mobile/me", { token: attendeeToken2 })).body.orgs.map((o) => o.slug),
+    [`${P}brand-new`],
+  );
+  check(
+    "creating it again is refused rather than crashing",
+    (await req("POST", "/mobile/orgs", {
+      token: attendeeToken2,
+      body: { name: "Brand New Org", slug: `${P}brand-new` },
+    })).status,
+    409,
+  );
+  check(
+    "and the creation was recorded",
+    (await prisma.auditLog.count({ where: { action: "CREATE_TENANT" } })) > 0,
+    true,
   );
 
   console.log("\nthe export carries personal data, and says so");
