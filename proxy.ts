@@ -36,8 +36,10 @@ function getSubdomain(host: string): string | null {
 }
 
 // First path segments the apex serves as marketing rather than as a tenant.
-// "/" is handled separately; "signup" covers /signup and /signup/check-email.
-const MARKETING_SEGMENTS = new Set(["signup"]);
+// "/" is handled separately; "signup" covers /signup and /signup/check-email;
+// "privacy" is the platform notice (the per-organization one lives under the
+// tenant path). Both are also reserved slugs in lib/slug.ts.
+const MARKETING_SEGMENTS = new Set(["signup", "privacy"]);
 
 export default function proxy(req: NextRequest) {
   const host = req.headers.get("host") ?? "";
