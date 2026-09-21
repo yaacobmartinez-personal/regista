@@ -48,7 +48,8 @@ services:
         sync: false
       - key: APPLE_TEAM_ID
         sync: false
-      # Social sign-in (lib/social-auth.ts). Without GOOGLE_WEB_CLIENT_ID the
-      # Google endpoint answers 401; Apple needs only the bundle id (defaulted).
+      # Social sign-in (lib/social-auth.ts): the Web OAuth client id, which the
+      # app requests ID tokens for and this server checks as their audience.
+      # Public by nature (it ships inside the app), so it lives here.
       - key: GOOGLE_WEB_CLIENT_ID
-        sync: false
+        value: 112308481791-2nj8fsso4gf8o20qrs8kk4hogj8c2oj5.apps.googleusercontent.com
