@@ -126,6 +126,7 @@ docs/            Requirements, dev guide, product overview
 
 ## Status
 
+**Live at [thingstead.pro](https://thingstead.pro).** The mobile API (`/api/mobile/*`, `/api/public/*` — 42 endpoints, specified in the app repo's `docs/API-CONTRACT.md`) is deployed and serves the [Flutter app](https://github.com/yaacobmartinez-personal/thingstead-mobile), which is built and pending release on the Play Store and App Store.
 **All six milestones built** — subdomain routing and tenant isolation, email-verified
 signup, events and public registration, attendee management, designed emails, and team
 members.
