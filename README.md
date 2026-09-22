@@ -138,3 +138,11 @@ Still needed before this could serve real people: a verified sending domain (not
 delivered without it — see the [developer guide](docs/DEVELOPMENT.md)), data processing
 agreements with the email and hosting providers, and the deployment decisions listed in
 [docs/DATA-RETENTION.md](docs/DATA-RETENTION.md).
+
+## Contributing
+
+Branches are named by kind: `feat/…` for features, `bug/…` for fixes,
+`chore/…` for docs, CI, config and releases. Open a PR against `master`; CI
+runs lint, unit, build, database and API tests. Delete the branch once merged.
+
+Render deploys `master` on every push, so a merge is a production deploy.
